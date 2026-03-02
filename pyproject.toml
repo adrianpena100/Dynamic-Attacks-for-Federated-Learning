@@ -1,0 +1,718 @@
+# --------------------------------------------------------
+##                 BUILD / PACKAGING                    ##
+# --------------------------------------------------------
+# I use Hatchling to build and package this project.
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+
+# --------------------------------------------------------
+##                    PROJECT META                      ##
+# --------------------------------------------------------
+# I keep the project metadata here (name, version, dependencies).
+
+[project]
+name = "dynamic_fl"
+version = "1.0.0"
+description = "Federated Learning with PyTorch and Flower (Quickstart Example)"
+license = "Apache-2.0"
+dependencies = [
+    "flwr[simulation]>=1.24.0",
+    "flwr-datasets[vision]>=0.5.0",
+    "matplotlib>=3.8.0",
+    "tomli>=2.0.1; python_version < '3.11'",
+    "torch==2.8.0",
+    "torchvision==0.23.0",
+]
+
+
+
+# --------------------------------------------------------
+##                     BUILD TARGETS                    ##
+# --------------------------------------------------------
+# I publish a wheel that includes my project package.
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
+
+
+# --------------------------------------------------------
+##                     FLOWER APP                       ##
+# --------------------------------------------------------
+# I configure the Flower app entrypoints here.
+
+[tool.flwr.app]
+publisher = "flwrlabs"
+
+
+
+# --------------------------------------------------------
+##                   FLOWER COMPONENTS                  ##
+# --------------------------------------------------------
+# I point Flower to my ServerApp and ClientApp.
+
+[tool.flwr.app.components]
+serverapp = "pytorchexample.server_app:app"
+clientapp = "pytorchexample.client_app:app"
+
+
+
+# --------------------------------------------------------
+##                   RUN CONFIG DEFAULTS                ##
+# --------------------------------------------------------
+
+[tool.flwr.app.config]
+# I store per-run artifacts in a run folder (scripts/run_simulation_and_log.py injects this).
+# I keep it empty here so a plain run still works.
+artifact-dir = ""
+
+
+# --------------------------------------------------------
+##                     QUICK OVERRIDES                  ##
+# --------------------------------------------------------
+# I use these keys as convenience overrides from the CLI.
+# Example: `./run.sh --run-config 'attack-preset="stress"'`
+attack-preset = ""
+
+
+# --------------------------------------------------------
+##                ATTACK OVERRIDES (CLI)                ##
+# --------------------------------------------------------
+# I forward these through Flower's fused `run_config` and read them in
+# `pytorchexample.task.load_attack_config`.
+# I intentionally use sentinel defaults so they don't override my TOML attack
+# settings unless I explicitly set them on the CLI.
+attack-enabled = ""
+attack-seed = -1
+attack-malicious-fraction = -1.0
+attack-malicious-fraction-mode = ""
+attack-selection-mode = ""
+attack-sticky-rounds = 0
+attack-churn-fraction = -1.0
+attack-churn-min-replace = -1
+attack-cooldown-rounds = -1
+attack-deterministic-per-round = ""
+attack-mode = ""
+attack-intensity-cap = -1.0
+attack-intensity-ramp-mode = ""
+attack-intensity-ramp-start-round = 0
+attack-intensity-ramp-end-round = 0
+attack-intensity-ramp-multiplier-start = -1.0
+attack-intensity-ramp-multiplier-end = -1.0
+attack-intensity-fail-escalation = ""
+attack-intensity-fail-multiplier-step = -1.0
+attack-intensity-fail-multiplier-max = -1.0
+attack-window-start-round = 0
+attack-window-end-round = 0
+attack-layering-mode = ""
+attack-layered-k = 0
+attack-layered-attacks = ""
+attack-layer-intensity-gaussian-noise = -1.0
+attack-layer-intensity-sign-flip = -1.0
+attack-layer-intensity-alie = -1.0
+attack-layer-intensity-mean-shift = -1.0
+attack-layer-intensity-label-flip = -1.0
+attack-layer-intensity-backdoor = -1.0
+trimmed-beta = 0.2
+
+
+
+
+
+
+# --------------------------------------------------------
+##                   STRATEGY SELECTION                 ##
+# --------------------------------------------------------
+# I choose the server strategy here (or can override it per run via `--run-config`).
+#
+# Supported strategies:
+#   - fedavg (default)
+#   - fedavgm
+#   - fedprox            (optional: proximal-mu=0.0)
+#   - qfedavg            (optional: q-param=0.2)
+#   - fedadagrad         (optional: eta=0.1 eta-l=0.1 tau=0.001)
+#   - fedadam            (optional: eta=0.1 eta-l=0.1 tau=0.001 beta-1=0.9 beta-2=0.99)
+#   - fedyogi            (optional: eta=0.1 eta-l=0.1 tau=0.001 beta-1=0.9 beta-2=0.99)
+#   - fedmedian
+#   - fedtrimmedavg      (optional: trimmed-beta=0.2)
+#   - krum               (optional: num-malicious-nodes=0)
+#   - multikrum          (optional: num-malicious-nodes=0 num-nodes-to-select=1)
+#   - bulyan             (optional: num-malicious-nodes=0)
+#
+# Common sampling knobs (defaults shown):
+#   fraction-train=1.0
+#   fraction-evaluate=0.5
+#   min-train-nodes=2
+#   min-evaluate-nodes=2
+#   min-available-nodes=2
+strategy = "multikrum"
+
+
+# --------------------------------------------------------
+##           ROBUST AGGREGATION STRATEGY PARAMS          ##
+# --------------------------------------------------------
+# NOTE: `num-malicious-nodes` is the expected number of Byzantine clients among the *selected* clients.
+# Example: if I select 100 clients/round and I ramp up to 40% attackers, I set this to 40.
+# If I change per-round participation (e.g., select 20 clients/round), I adjust this too:
+#   - 20 selected with a 20% attacker cap => num-malicious-nodes = 4
+num-malicious-nodes = 25
+
+# For MultiKrum: I choose how many client updates to keep each round.
+# Constraint: must be <= num_selected_clients - num_malicious_nodes - 2.
+num-nodes-to-select = 73
+
+
+# --------------------------------------------------------
+##                 DATASET + PARTITIONING               ##
+# --------------------------------------------------------
+# I pick the dataset and how I partition it across clients.
+#
+# Supported right now:
+# - uoft-cs/cifar10 (default)
+# - uoft-cs/cifar100
+# - ylecun/mnist
+# - zalando-datasets/fashion_mnist
+#
+# Partitioning:
+# - iid (default)
+# - dirichlet (non-IID; controlled by dirichlet-alpha)
+dataset = "ylecun/mnist"
+dataset-modality = "auto"
+dataset-train-split = "train"
+dataset-eval-split = "test"
+dataset-subset = ""
+
+
+# I disable HF remote code execution by default for safety.
+hf-trust-remote-code = false
+
+
+# Optional column overrides (I leave these empty for auto-detect).
+image-key = ""
+text-key = ""
+audio-key = ""
+label-key = ""
+num-classes = 0
+partitioner = "dirichlet"
+dirichlet-alpha = 0.1
+
+
+# --------------------------------------------------------
+##             DATASET CATALOG                          ##
+# --------------------------------------------------------
+# I keep a catalog of dataset options here as a personal reference.
+#
+# When I wire this up later, I can make it so I only change one key like:
+#   dataset = "ylecun/mnist"
+# and the code picks the right preprocessing/model *per modality*.
+#
+# IID vs non-IID note:
+# - Most datasets can be made IID or non-IID depending on the partitioner I choose.
+# - Some are naturally non-IID due to client/user IDs (e.g., FEMNIST by writer).
+#
+# Image datasets
+# - ylecun/mnist                 | train 60k; test 10k           | 28x28      | IID or non-IID (partitioner)
+# - uoft-cs/cifar10              | train 50k; test 10k           | 32x32x3    | IID or non-IID (partitioner)  (CURRENT)
+# - uoft-cs/cifar100             | train 50k; test 10k           | 32x32x3    | IID or non-IID (partitioner)
+# - zalando-datasets/fashion_mnist | train 60k; test 10k         | 28x28      | IID or non-IID (partitioner)
+# - flwrlabs/femnist             | train 814k                    | 28x28      | typically natural non-IID (by writer/user id)
+# - zh-plus/tiny-imagenet        | train 100k; valid 10k         | 64x64x3    | IID or non-IID (partitioner)
+# - flwrlabs/usps                | train 7.3k; test 2k           | 16x16      | IID or non-IID (partitioner)
+# - flwrlabs/pacs                | train 10k                     | 227x227    | often non-IID by domain shift (if partitioned by domain)
+# - flwrlabs/cinic10             | train 90k; valid 90k; test 90k| 32x32x3    | IID or non-IID (partitioner)
+# - flwrlabs/caltech101          | train 8.7k                    | varies     | IID or non-IID (partitioner)
+# - flwrlabs/office-home         | train 15.6k                   | varies     | often non-IID by domain shift (if partitioned by domain)
+# - flwrlabs/fed-isic2019        | train 18.6k; test 4.7k        | varies     | typically non-IID (medical heterogeneity)
+# - ufldl-stanford/svhn          | train 73.3k; test 26k; extra 531k | 32x32x3 | IID or non-IID (partitioner)
+# - sasha/dog-food               | train 2.1k; test 0.9k         | varies     | IID or non-IID (partitioner)
+# - Mike0307/MNIST-M             | train 59k; test 9k            | 32x32      | IID or non-IID (partitioner)
+#
+# Audio datasets (requires different model)
+# - google/speech_commands       | train 64.7k                   | v0.01      | IID/non-IID depends; can be natural by speaker id
+# - google/speech_commands       | train 105.8k                  | v0.02      | IID/non-IID depends
+# - flwrlabs/ambient-acoustic-context | train 70.3k              | -          | IID/non-IID depends
+# - fixie-ai/common_voice_17_0   | varies                        | 14 versions| often natural non-IID by speaker/locale
+# - fixie-ai/librispeech_asr     | varies                        | clean/other| can be natural non-IID by speaker/book
+#
+# Tabular datasets (requires different model)
+# - scikit-learn/adult-census-income | train 32.6k               | -          | IID/non-IID depends
+# - jlh/uci-mushrooms            | train 8.1k                    | -          | IID/non-IID depends
+# - scikit-learn/iris            | train 150                     | -          | IID/non-IID depends
+# - jiahborcn/chembl_aqsol       | train 12.9k; test 3.2k        | -          | IID/non-IID depends
+# - jiahborcn/chembl_multiassay_activity | train 350k; test 87.5k | -        | IID/non-IID depends
+#
+# Text datasets (requires different model)
+# - sentiment140                 | train 1.6M; test 0.5k         | Sentiment  | can be natural non-IID by user/time (if IDs exist)
+# - google-research-datasets/mbpp | full 974; sanitized 427      | General    | IID/non-IID depends
+# - openai/openai_humaneval      | test 164                      | General    | eval-style dataset; not typical FL training
+# - lukaemon/mmlu                | varies                        | General    | IID/non-IID depends
+# - takala/financial_phrasebank  | train 4.8k                    | Financial  | IID/non-IID depends
+# - pauri32/fiqa-2018            | train 0.9k; val 0.1k; test 0.2k| Financial | IID/non-IID depends
+# - zeroshot/twitter-financial-news-sentiment | train 9.5k; val 2.4k | Financial | IID/non-IID depends
+# - bigbio/pubmed_qa             | train 2M; val 11k             | Medical    | IID/non-IID depends
+# - openlifescienceai/medmcqa    | train 183k; val 4.3k; test 6.2k| Medical   | IID/non-IID depends
+# - bigbio/med_qa                | train 10.1k; test 1.3k; val 1.3k| Medical  | IID/non-IID depends
+
+
+# --------------------------------------------------------
+##                   TRAINING / SAMPLING                ##
+# --------------------------------------------------------
+# I keep the core training knobs here (rounds, sampling fractions, epochs, LR, batch size).
+
+num-server-rounds = 30
+fraction-train = 1.0
+fraction-evaluate = 1.0
+min-train-nodes = 2
+min-evaluate-nodes = 2
+min-available-nodes = 2
+local-epochs = 1
+learning-rate = 0.1
+batch-size = 32
+
+# Optional dataset size caps (0 = no cap). I use these for fast smoke tests.
+max-train-examples = 0
+max-val-examples = 0
+max-central-eval-examples = 0
+
+# Optional: I emit per-client metric lines into stdout so my runner can plot
+# per-client learning curves (one line per client).
+emit-client-metrics = true
+
+# --------------------------------------------------------
+# Stress-test (no-attack) convenience
+#
+# If I want to intentionally make training harder (often lower accuracy)
+# *without* enabling attacks, I use:
+#   ./run_stress.sh --profile combo
+# Profiles live in run_stress.sh: non_iid | low_participation | low_data | combo
+# --------------------------------------------------------
+
+[tool.flwr.attack]
+enabled = true
+seed = -1
+log_level = "INFO"
+
+
+
+
+
+
+
+# --------------------------------------------------------
+##                    ATTACK CONTROLS                   ##
+# --------------------------------------------------------
+# This section controls my attack scheduling and poisoning logic.
+# - Supported by two broad classes of attacks:
+#   1) Update poisoning (server-side): malicious clients craft their *model update*.
+#      Examples: gaussian_noise, sign_flip, ALIE, mean_shift.
+#   2) Data poisoning (client-side): malicious clients poison their *local training data*.
+#      Examples: label_flip, backdoor.
+#
+# Evaluation:
+# - Clean test accuracy can stay high even when attacks are enabled.
+# - For backdoors, the main metric is ASR (attack success rate): the fraction of
+#   triggered test images classified as my target.
+# - It shows `evaluate_server backdoor_asr` when backdoor is enabled.
+
+
+
+# --------------------------------------------------------
+##                        PRESETS                        ##
+# --------------------------------------------------------
+# I use presets to quickly toggle attack sets without editing multiple fields.
+# Options:
+#   - "custom" (default behavior: use the weights/enabled flags below as-is)
+#   - "all" (enable all attacks + equal weights)
+#   - "update_only" (gaussian_noise + sign_flip + ALIE + mean_shift)
+#   - "data_only" (label_flip + backdoor only)
+#   - "noise_only" / "sign_flip_only" / "label_only" / "backdoor_only"
+#   - "off" (disable attacks globally)
+
+preset = "all"
+
+
+# --------------------------------------------------------
+##              MULTI-LAYER (STACKED) ATTACKS            ##
+# --------------------------------------------------------
+# By default, the simulator picks a single attack type per round.
+# To stack multiple attacks within the same round ("layered poisoning"),
+# configure one of these modes:
+#   - "single": (default) choose exactly one attack per round
+#   - "fixed":  always apply the same ordered list each attacked round
+#   - "sample_k": sample K unique attacks per attacked round (weighted)
+
+layering_mode = "single"      # single|fixed|sample_k
+layered_k = 6                 # used when layering_mode="sample_k" (ignored for single)
+layered_attacks = [
+    "gaussian_noise",
+    "sign_flip",
+    "alie",
+    "mean_shift",
+    "label_flip",
+    "backdoor",
+]  # used when layering_mode="fixed"
+
+# --------------------------------------------------------
+##                     INTENSITY (RAMP)                 ##
+# --------------------------------------------------------
+# I optionally ramp attack intensity over time.
+#
+# What “intensity” means (how I use it):
+# - Intensity is a scalar that controls *how strong* the current attack is.
+# - It does not change which clients are malicious. It only scales the attack magnitude.
+#
+# How the final/effective intensity is computed:
+# - Each round starts with a base intensity (usually sampled from `random_intensity_*`).
+# - Then I multiply that base by a ramp multiplier from this section.
+#   Effective intensity (round t) ≈ base_intensity(t) × ramp_multiplier(t).
+#
+# Why ramp?:
+# - It models an adversary that escalates over time (gets more confident or more capable).
+# - It helps test whether a defense fails “gracefully” as attacks strengthen.
+# - Compare strategies under a controlled, monotonic increase in difficulty.
+
+
+intensity_ramp_mode = "linear"   # none|linear|exp
+intensity_ramp_start_round = 10
+intensity_ramp_end_round = 30
+intensity_ramp_multiplier_start = 1.0
+intensity_ramp_multiplier_end = 3.0
+intensity_cap = 0.0              # I cap the *effective* intensity (0 disables cap)
+
+# In adaptive mode, I can escalate if the current attack isn’t achieving my goal.
+# - If the attack stops degrading the chosen metric (such as accuracy), I increase intensity.
+# - `intensity_fail_multiplier_step` is the per-escalation step size.
+# - `intensity_fail_multiplier_max` is the maximum escalation factor I allow from failures.
+
+intensity_fail_escalation = true
+intensity_fail_multiplier_step = 0.25
+intensity_fail_multiplier_max = 2.0
+
+
+
+# --------------------------------------------------------
+##                   STEALTH (UPDATE NORM)              ##
+# --------------------------------------------------------
+# In stealth mode (update-poisoning), I cap crafted malicious update norms
+# so they look less like outliers relative to honest updates.
+stealth_mode = true
+stealth_norm_quantile = 0.9
+stealth_norm_multiplier = 1.0
+
+
+# --------------------------------------------------------
+##                  MALICIOUS FRACTION                  ##
+# --------------------------------------------------------
+# How I decide what fraction of clients are malicious each round.
+# OPTIONS:
+# - fixed: always use `malicious_fraction`
+# - uniform: sample each round from [min, max]
+# - choice: sample each round from an explicit list
+
+malicious_fraction = 0.25
+malicious_fraction_mode = "fixed"
+malicious_fraction_min = 0.2
+malicious_fraction_max = 0.3
+
+
+# Optional: can ramp the malicious fraction over rounds (overrides `malicious_fraction_mode`).
+# Example below ramps from 5% at round 1 to 20% at round 30.
+
+malicious_fraction_ramp_mode = "none"   # none|linear|exp
+malicious_fraction_ramp_start_round = 1
+malicious_fraction_ramp_end_round = 30
+malicious_fraction_ramp_value_start = 0.05
+malicious_fraction_ramp_value_end = 0.20
+malicious_fraction_cap = 0.0              # 0 disables cap
+
+
+
+# --------------------------------------------------------
+##                MALICIOUS COHORT SELECTION             ##
+# --------------------------------------------------------
+# This is how I decide *which* clients are malicious each round:
+# - per_round_random: I choose a new malicious set each round
+# - sticky: I select once and reuse for the entire run
+# - sticky_k: I keep the same malicious set for `sticky_rounds`, then resample
+# - churn: I replace a fraction (`churn_fraction`) of the malicious set each round
+#
+# Default I use at the moment: sticky_k + cooldown
+# - I keep a cohort malicious for a few rounds (persistence)
+# - then I rotate to a new cohort (attacker moves between clients)
+
+
+selection_mode = "churn"
+
+# Sticky-window length (only used when I set selection_mode="sticky_k")
+sticky_rounds = 5
+
+# Churn settings (only used when I set selection_mode="churn")
+churn_fraction = 0.5
+churn_min_replace = 2
+
+# Optional: I avoid reselecting the same malicious clients too soon.
+# With sticky_k, I usually match the window length so rotations prefer clients
+# that were recently "safe".
+cooldown_rounds = 2
+
+# If true, I make the selection deterministic (same seed+round => same cohort)
+deterministic_per_round = true
+
+
+# --------------------------------------------------------
+##                   ATTACK MODE (CHOICE)               ##
+# --------------------------------------------------------
+# This controls how I pick the attack type each round.
+#
+# The three modes (what changes when I switch this):
+# - phase: follow explicit phases (I hard-code attack_name by round range).
+# - weighted_random: sample an attack each round using the weights below.
+# - adaptive: *learn online* which attack is most effective at harming a chosen metric.
+#
+# "Adaptive":
+#  !!!!!! CURRRENTLY USING EPSILON-GREEDY BANDIT SELECTION !!!!!!
+#  NEED TO CHANGE TO RL
+#
+# - treat each attack type as an arm in a multi-armed bandit.
+# - After each round, I look at the server-side evaluation metric (from `evaluate_server`).
+# - Assign a reward to the attack I used, and then I bias future choices toward attacks with
+#   the best recent average reward.
+#
+# Important assumption (super important when picking `adaptive_metric`):
+# - The reward is defined so that “lower is better” for the chosen metric.
+#   - For `accuracy`, minimizing makes sense for an attacker (We want accuracy to drop).
+#   - For `loss`, minimizing usually does NOT match an attacker goal (attackers often try to increase loss).
+#   - For `backdoor_asr`, attackers often want to increase it; for adaptive mode I would instead log a
+#     transformed metric like `1 - backdoor_asr` (so lowering it should mean ASR increased).
+
+mode = "adaptive"
+
+
+# Adaptive mode knobs (used only when I set mode="adaptive")
+#
+#
+# AT THE MOMENT THIS IS ON A PER RUN BASIS. NOT SAVED FOR FUTURE RUNS.
+#
+#
+# - adaptive_metric:
+#   The server-side `evaluate_server` metric I use for feedback.
+#   Examples: "accuracy", "loss", "backdoor_asr".
+#
+# - adaptive_goal:
+#   - "minimize": I keep trying to push the metric down indefinitely.
+#   - "below": I stop attacking (attack_name="none") once metric <= adaptive_target.
+#
+# - adaptive_burn_in_rounds:
+#   For the first N rounds, I behave like weighted_random so I can collect initial feedback.
+#
+# - adaptive_epsilon:
+#   My exploration probability (epsilon-greedy).
+#   With probability epsilon, I intentionally try a different attack even if I have a current best.
+#
+# - adaptive_window:
+#   When attacks are ranked, I average only the last `adaptive_window` rewards per attack.
+#
+# - adaptive_min_delta + adaptive_patience:
+#   Track whether the *current* attack is “working”. Each time the reward is < min_delta, I count a fail.
+#   After `adaptive_patience` consecutive fails, I force a switch to a different attack.
+
+
+adaptive_metric = "accuracy"
+adaptive_goal = "minimize"
+adaptive_target = 0.2
+adaptive_epsilon = 0.2
+adaptive_min_delta = 0.0
+adaptive_patience = 2
+adaptive_window = 5
+adaptive_burn_in_rounds = 1
+
+
+
+# --------------------------------------------------------
+##                    INTENSITY (BASE)                  ##
+# --------------------------------------------------------
+# Intensity is VERY important.
+# - Each round has an `intensity` scalar. In `mode="weighted_random"` it is
+#   sampled randomly; in `mode="phase"` it can be fixed/periodic.
+# - Intensity is a multiplier on attack strength parameters. 
+#
+#
+#   Examples:
+#   - gaussian_noise: effective sigma = sigma * intensity (or relative variant)
+#   - sign_flip:      effective alpha = alpha * intensity
+#   - label_flip:     effective flip_rate = flip_rate * intensity 
+#   - backdoor:       effective poison_rate = poison_rate * intensity 
+#                    and effective blend_alpha = blend_alpha * intensity 
+#   - ALIE/mean_shift: intensity scales the crafted update magnitude
+#
+# Weighted-random intensity policy (multiplier applied to attack strength)
+
+
+random_intensity_mode = "uniform"
+random_intensity_min = 0.2
+random_intensity_max = 1.0
+
+# When gaussian_noise is chosen in weighted-random mode, I sometimes scale noise
+# relative to the observed median update norm that round.
+
+random_relative_to_update_norm_probability = 0.75
+
+
+# --------------------------------------------------------
+##                   ATTACK SCHEDULING                 ##
+# --------------------------------------------------------
+# I define weights, optional phases, and optional windows below.
+
+[tool.flwr.attack.weights]
+gaussian_noise = 0.25
+sign_flip = 0.25
+label_flip = 0.25
+backdoor = 0.25
+alie = 0.25
+mean_shift = 0.25
+
+[[tool.flwr.attack.phases]]
+start_round = 1
+end_round = 30
+attack_name = "none"
+
+
+# Optional global windows: if I provide these, attacks only apply within these intervals.
+# I use this for delayed-onset experiments (start attacking later in the run).
+[[tool.flwr.attack.windows]]
+start_round = 15
+end_round = 30
+
+
+
+# --------------------------------------------------------
+##                      ATTACK TYPES                    ##
+# --------------------------------------------------------
+
+# Where each attack runs (brief):
+# - Server-side update poisoning: after the server receives client updates, it corrupts the malicious clients' model updates
+#   right before aggregation (clients still train normally, but their uploaded update gets modified).
+# - Client-side data poisoning: the server sends per-client instructions; malicious clients poison their *local training data*
+#   during training and then upload the resulting (poisoned) update.
+
+[tool.flwr.attack.attacks.gaussian_noise]
+enabled = true
+sigma = 0.5
+relative = true
+
+
+# Gaussian_noise as an update-poisoning attack (SERVER-SIDE).
+# - Add random Gaussian noise to malicious client updates.
+# - If `relative=true`, scale noise relative to the typical update norm of
+#   honest clients in that round (so it tracks the natural scale of training).
+# -------------------------------------------------------------------------------
+
+[tool.flwr.attack.attacks.sign_flip]
+enabled = true
+alpha = 1.0
+
+
+# Use sign_flip as an update-poisoning attack (SERVER-SIDE).
+# - Flip malicious updates in the opposite direction of the honest gradient.
+# - `alpha` controls how strongly I flip/scale the update.
+# -------------------------------------------------------------------------------
+
+[tool.flwr.attack.attacks.label_flip]
+enabled = true
+flip_rate = 0.2
+targeted = false
+source_class = 0
+target_class = 1
+
+
+# Label_flip as a data-poisoning attack (CLIENT-SIDE).
+# - With probability `flip_rate`, replace a training label with another label.
+# - If `targeted=false`, labels are flipped to a (pseudo-)random other class.
+# - If `targeted=true`, I only apply `source_class -> target_class`.
+# -------------------------------------------------------------------------------
+
+[tool.flwr.attack.attacks.backdoor]
+enabled = true
+poison_rate = 0.1
+target_label = 0
+trigger_type = "patch"
+patch_size = 4
+blend_alpha = 0.2
+
+
+# Backdoor as a data-poisoning attack (CLIENT-SIDE).
+# - On a fraction of malicious clients' local training samples (`poison_rate`), overlay a trigger
+#   (currently a bottom-right patch) and I force the label to `target_label`.
+# - `patch_size` is the trigger square width/height in pixels.
+# - `blend_alpha` controls how visible the patch is (0 = no change, 1 = full patch).
+#
+# Triggered evaluation (ASR)
+# - When backdoor is enabled, we can additionally report:
+#   - `evaluate_server backdoor_asr`: fraction of triggered test images predicted as `target_label`.
+#   - `evaluate_server backdoor_loss`: loss against the forced `target_label` on triggered inputs.
+# -------------------------------------------------------------------------------
+
+[tool.flwr.attack.attacks.alie]
+enabled = true
+z = -2.0
+
+
+# I use ALIE (A Little Is Enough) as an update-poisoning attack (SERVER-SIDE).
+# - High-level: create a malicious update that looks statistically plausible by staying near the
+#   honest update distribution, but shifted so aggregation is biased.
+# - Estimate honest mean μ and std σ (per parameter) and send something like μ + z·σ.
+# - `z` is the z-score-like shift: more negative/positive values push farther away.
+#   (Sign conventions depend on the specific implementation.)
+# -------------------------------------------------------------------------------
+
+[tool.flwr.attack.attacks.mean_shift]
+enabled = true
+beta = 1.0
+
+
+# Use mean_shift as an update-poisoning attack (SERVER-SIDE).
+# - Shift the aggregated direction by injecting an update that moves the mean in an
+#   attacker-chosen direction, often proportional to the honest mean update.
+# - `beta` scales the strength of that shift (bigger = more aggressive).
+
+
+# Optional: per-layer intensity multipliers (applied on top of the round's base `attack_intensity`).
+# Effective per-layer intensity = attack_intensity * multiplier.
+#
+# Example: make ALIE/mean_shift stronger while keeping gaussian noise light.
+#
+[tool.flwr.attack.layer_intensity_multipliers]
+gaussian_noise = 0.1
+sign_flip = 0.5
+alie = 1.5
+mean_shift = 2.5
+label_flip = 1.0
+backdoor = 1.0
+
+
+# --------------------------------------------------------
+##                      FEDERATIONS                     ##
+# --------------------------------------------------------
+# I define federation profiles (local simulation, smoke tests, GPU runs, etc.) here.
+
+[tool.flwr.federations]
+default = "local-simulation"
+
+[tool.flwr.federations.local-simulation]
+options.num-supernodes = 100
+
+[tool.flwr.federations.local-simulation-smoke]
+options.num-supernodes = 2
+
+[tool.flwr.federations.local-simulation-gpu]
+options.num-supernodes = 100
+options.backend.client-resources.num-cpus = 2 # I assume each ClientApp uses ~2 CPUs
+options.backend.client-resources.num-gpus = 0.2 # I allow at most ~5 ClientApps per GPU
+
+[tool.flwr.federations.supergrid-deployment]
+address = "supergrid.flower.ai"
+enable-account-auth = true
