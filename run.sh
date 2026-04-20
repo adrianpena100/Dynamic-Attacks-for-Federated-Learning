@@ -16,14 +16,31 @@ if [[ ! -x "$PYTHON_BIN" ]]; then
   exit 1
 fi
 
+
+# --- Run simulation and capture output directory ---
+RUN_OUTPUT_DIR=""
 if [[ "$#" -eq 0 ]]; then
   # Default run: use only pyproject.toml config.
   # This keeps "./run.sh" as the simplest entrypoint; override via args if needed.
-  exec "$PYTHON_BIN" "$ROOT_DIR/scripts/run_simulation_and_log.py" \
-    --project-root "$ROOT_DIR"
+  RUN_OUTPUT_DIR=$("$PYTHON_BIN" "$ROOT_DIR/scripts/run_simulation_and_log.py" \
+    --project-root "$ROOT_DIR" --print-log-dir)
 else
   # Passthrough mode (keeps backwards compatibility).
-  exec "$PYTHON_BIN" "$ROOT_DIR/scripts/run_simulation_and_log.py" \
-    --project-root "$ROOT_DIR" \
-    "$@"
+  RUN_OUTPUT_DIR=$("$PYTHON_BIN" "$ROOT_DIR/scripts/run_simulation_and_log.py" \
+    --project-root "$ROOT_DIR" --print-log-dir "$@")
+fi
+
+# If the simulation script does not print the log dir, fallback to latest log dir
+if [[ ! -d "$RUN_OUTPUT_DIR" ]]; then
+  RUN_OUTPUT_DIR=$(ls -td "$ROOT_DIR"/logs/*__*__*__* 2>/dev/null | head -n1)
+fi
+
+if [[ -d "$RUN_OUTPUT_DIR" ]]; then
+  # Run LLM analysis and place markdown in a subfolder
+  ANALYSIS_DIR="$RUN_OUTPUT_DIR/llm_analysis"
+  mkdir -p "$ANALYSIS_DIR"
+  "$PYTHON_BIN" "$ROOT_DIR/scripts/llm_sweep_analysis.py" --sweeps-root "$RUN_OUTPUT_DIR" --output-dir "$ANALYSIS_DIR" --single-run --call-api
+  echo "LLM analysis written to: $ANALYSIS_DIR"
+else
+  echo "Warning: Could not determine run output directory for LLM analysis." >&2
 fi
