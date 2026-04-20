@@ -3463,7 +3463,7 @@ class AttackEngine:
         defense_selection: Dict[str, Any] = {}
         try:
             strategy_name = str(self.run_config.get("strategy", "") or "").strip().lower()
-            if strategy_name in {"multikrum", "multi-krum", "krum"}:
+            if strategy_name in {"multikrum", "multi-krum", "krum", "bulyan"}:
                 from flwr.serverapp.strategy.multikrum import select_multikrum
 
                 num_mal_assumed = int(self.run_config.get("num-malicious-nodes", 0) or 0)
@@ -3513,7 +3513,7 @@ class AttackEngine:
                 frac_mal_selected = float(num_mal_selected) / float(num_selected) if num_selected > 0 else 0.0
 
                 defense_selection = {
-                    "defense_strategy": "krum" if strategy_name == "krum" else "multikrum",
+                    "defense_strategy": "krum" if strategy_name == "krum" else ("bulyan" if strategy_name == "bulyan" else "multikrum"),
                     "num_selected": int(num_selected),
                     "num_malicious_selected": int(num_mal_selected),
                     "malicious_selected_fraction": float(frac_mal_selected),
@@ -3652,6 +3652,16 @@ def get_dataset_spec(dataset: str) -> DatasetSpec:
             dataset=ds,
             label_key="label",
             num_classes=10,
+            modality="vision",
+            image_key="image",
+            input_channels=1,
+            central_eval_split="test",
+        )
+    if ds == "flwrlabs/femnist":
+        return DatasetSpec(
+            dataset=ds,
+            label_key="character",
+            num_classes=62,
             modality="vision",
             image_key="image",
             input_channels=1,
@@ -4198,6 +4208,31 @@ def load_centralized_dataset(
     except Exception:
         eval_dataset = load_dataset(spec.dataset, split="validation", **ds_kwargs)
 
+    # Stratified subsampling BEFORE transforms (needs raw label column).
+    cap = int(max_eval_examples or 0)
+    if cap > 0 and cap < len(eval_dataset):
+        import random as _rnd
+        from collections import defaultdict as _ddict
+        _lk = spec.label_key
+        if _lk and _lk in eval_dataset.column_names:
+            _rng = _rnd.Random(42)
+            _labels = eval_dataset[_lk]
+            _per_class: Dict[Any, List[int]] = _ddict(list)
+            for _i, _lab in enumerate(_labels):
+                _per_class[_lab].append(_i)
+            _nc = len(_per_class)
+            _per = cap // _nc
+            _rem = cap - _per * _nc
+            _indices: List[int] = []
+            for _ci, (_cls, _idxs) in enumerate(sorted(_per_class.items())):
+                _rng.shuffle(_idxs)
+                _take = _per + (1 if _ci < _rem else 0)
+                _indices.extend(_idxs[:min(_take, len(_idxs))])
+            _rng.shuffle(_indices)
+            eval_dataset = eval_dataset.select(_indices)
+        else:
+            eval_dataset = eval_dataset.shuffle(seed=42).select(range(cap))
+
     if spec.modality == "vision":
         eval_dataset = eval_dataset.with_format("torch").with_transform(
             _apply_transforms_factory(spec)
@@ -4216,10 +4251,6 @@ def load_centralized_dataset(
         )
     else:
         raise ValueError(f"Unsupported modality: {spec.modality!r}")
-
-    cap = int(max_eval_examples or 0)
-    if cap > 0 and cap < len(eval_dataset):
-        eval_dataset = eval_dataset.select(range(cap))
 
     return DataLoader(eval_dataset, batch_size=int(batch_size))
 

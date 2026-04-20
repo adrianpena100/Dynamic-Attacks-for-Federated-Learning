@@ -1,3 +1,9 @@
 logs/
 run5.sh
 final_model.pt
+.env
+paper_draft.tex
+thesis_sweeps.conf
+todo.txt
+femnist_sweep_analysis.ipynb
+thesis_sweep_analysis.ipynb

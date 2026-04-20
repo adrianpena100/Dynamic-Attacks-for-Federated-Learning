@@ -327,6 +327,112 @@ class AttackBulyan(AttackInjectedStrategyMixin, Bulyan):
     pass
 
 
+# ---------------------------------------------------------------------------
+# FLTrust (Cao et al., 2021) — trust-score robust aggregation
+# ---------------------------------------------------------------------------
+# The server maintains a small clean "root" dataset.  Each round it trains a
+# local copy of the global model on the root data to obtain a server update.
+# Client updates are scored by cosine similarity to the server update (ReLU-
+# clipped), normalised to the server update norm, then trust-weighted averaged.
+
+class FLTrustStrategy(FedAvg):
+    """FLTrust aggregation built on top of FedAvg's client selection logic."""
+
+    def __init__(
+        self,
+        root_dataloader,
+        model_factory,
+        device,
+        server_lr: float = 0.1,
+        server_epochs: int = 1,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self._fltrust_root_loader = root_dataloader
+        self._fltrust_model_factory = model_factory
+        self._fltrust_device = device
+        self._fltrust_lr = server_lr
+        self._fltrust_epochs = server_epochs
+
+    # -- aggregation ---------------------------------------------------------
+    def aggregate_train(self, server_round: int, replies):
+        replies_list = list(replies)
+        global_arrays = getattr(self, "_last_finite_global_arrays", None)
+        if global_arrays is None or not replies_list:
+            return super().aggregate_train(server_round, replies_list)
+
+        global_sd = global_arrays.to_torch_state_dict()
+        param_keys = list(global_sd.keys())
+
+        # 1. Server update via training on root data ----------------------
+        srv = self._fltrust_model_factory()
+        srv.load_state_dict({k: v.clone() for k, v in global_sd.items()})
+        srv.to(self._fltrust_device)
+        srv.train()
+        opt = torch.optim.SGD(srv.parameters(), lr=self._fltrust_lr)
+        crit = torch.nn.CrossEntropyLoss()
+        for _epoch in range(self._fltrust_epochs):
+            for batch in self._fltrust_root_loader:
+                inputs = batch["img"].to(self._fltrust_device) if "img" in batch else batch["x"].to(self._fltrust_device)
+                labels = batch["label"].to(self._fltrust_device)
+                opt.zero_grad()
+                crit(srv(inputs), labels).backward()
+                opt.step()
+
+        srv_sd = srv.state_dict()
+        srv_flat = torch.cat([(srv_sd[k].cpu().float() - global_sd[k].cpu().float()).flatten() for k in param_keys])
+        srv_norm = torch.norm(srv_flat).item()
+        if srv_norm < 1e-10:
+            return super().aggregate_train(server_round, replies_list)
+
+        # 2. Score each client update -------------------------------------
+        client_flats: list[torch.Tensor] = []
+        trust_scores: list[float] = []
+        for reply in replies_list:
+            try:
+                c_sd = reply.content["arrays"].to_torch_state_dict()
+            except Exception:
+                continue
+            c_flat = torch.cat([(c_sd[k].cpu().float() - global_sd[k].cpu().float()).flatten() for k in param_keys])
+            c_norm = torch.norm(c_flat).item()
+            if c_norm < 1e-10:
+                ts = 0.0
+            else:
+                ts = max(0.0, float(torch.dot(srv_flat, c_flat) / (srv_norm * c_norm)))
+            client_flats.append(c_flat)
+            trust_scores.append(ts)
+
+        total_ts = sum(trust_scores)
+        if not client_flats or total_ts < 1e-10:
+            return super().aggregate_train(server_round, replies_list)
+
+        # 3. Trust-weighted aggregation (normalised to server norm) --------
+        agg_flat = torch.zeros_like(srv_flat)
+        for c_flat, ts in zip(client_flats, trust_scores):
+            if ts < 1e-10:
+                continue
+            c_norm = torch.norm(c_flat).item()
+            scale = (srv_norm / c_norm) if c_norm > 1e-10 else 0.0
+            agg_flat += (ts / total_ts) * scale * c_flat
+
+        offset = 0
+        agg_sd: dict = {}
+        for k in param_keys:
+            numel = global_sd[k].numel()
+            agg_sd[k] = global_sd[k].cpu().float() + agg_flat[offset : offset + numel].reshape(global_sd[k].shape)
+            offset += numel
+
+        agg_metrics = MetricRecord({
+            "fltrust_avg_trust": float(total_ts / len(trust_scores)),
+            "fltrust_zero_trust_count": float(sum(1 for t in trust_scores if t < 1e-10)),
+        })
+        return ArrayRecord(agg_sd), agg_metrics
+
+
+class AttackFLTrust(AttackInjectedStrategyMixin, FLTrustStrategy):
+    pass
+
+
 @app.main()
 def main(grid: Grid, context: Context) -> None:
     """Main entry point for the ServerApp."""
@@ -421,12 +527,48 @@ def main(grid: Grid, context: Context) -> None:
     elif strategy_name in {"bulyan"}:
         num_malicious_nodes: int = int(context.run_config.get("num-malicious-nodes", 0))
         strategy = AttackBulyan(num_malicious_nodes=num_malicious_nodes, **common_kwargs)
+    elif strategy_name in {"fltrust", "fl-trust"}:
+        _nc = spec.num_classes or 10
+        # Auto-compute root size: ~30 samples per class, min 500 (for class coverage)
+        _raw_root = int(context.run_config.get("fltrust-root-size", 0) or 0)
+        fltrust_root_size = _raw_root if _raw_root > 0 else max(500, _nc * 30)
+        # Server epochs: 1 by default (paper-faithful). Override with fltrust-server-epochs.
+        fltrust_epochs = int(context.run_config.get("fltrust-server-epochs", 0) or 0) or 1
+        fltrust_batch_size: int = int(context.run_config.get("fltrust-root-batch-size", 32) or 32)
+        fltrust_lr: float = float(context.run_config.get("fltrust-server-lr", lr) or lr)
+        print(f"[FLTrust] auto-config: num_classes={_nc}, root_size={fltrust_root_size}, "
+              f"server_epochs={fltrust_epochs}, batch_size={fltrust_batch_size}, lr={fltrust_lr}")
+        _rc = dict(context.run_config)
+        _root_loader = load_centralized_dataset(
+            dataset=spec.dataset,
+            dataset_subset=str(_rc.get("dataset-subset", "")),
+            dataset_modality=str(_rc.get("dataset-modality", "auto")),
+            train_split=str(_rc.get("dataset-train-split", "train")),
+            eval_split=str(_rc.get("dataset-train-split", "train")),  # root = train split
+            image_key=str(_rc.get("image-key", "")),
+            text_key=str(_rc.get("text-key", "")),
+            audio_key=str(_rc.get("audio-key", "")),
+            label_key=str(_rc.get("label-key", "")),
+            num_classes=int(_rc.get("num-classes", 0) or 0),
+            hf_trust_remote_code=bool(_rc.get("hf-trust-remote-code", False)),
+            batch_size=fltrust_batch_size,
+            max_eval_examples=fltrust_root_size,
+        )
+        _device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        strategy = AttackFLTrust(
+            root_dataloader=_root_loader,
+            model_factory=model_factory,
+            device=_device,
+            server_lr=fltrust_lr,
+            server_epochs=fltrust_epochs,
+            **common_kwargs,
+        )
     else:
         print(
             "WARNING: Unknown strategy in run config: "
             f"{strategy_name!r}. Falling back to 'fedavg'. "
             "(Supported: fedavg, fedavgm, fedprox, qfedavg, fedadagrad, fedadam, "
-            "fedyogi, fedmedian, fedtrimmedavg, krum, multikrum, bulyan.)"
+            "fedyogi, fedmedian, fedtrimmedavg, krum, multikrum, bulyan, fltrust.)"
         )
         strategy = AttackFedAvg(**common_kwargs)
 

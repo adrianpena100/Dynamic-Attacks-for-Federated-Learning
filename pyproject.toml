@@ -119,6 +119,19 @@ attack-layer-intensity-label-flip = -1.0
 attack-layer-intensity-backdoor = -1.0
 trimmed-beta = 0.2
 
+# FLTrust-specific knobs (only used when strategy = "fltrust").
+# root-size: number of clean root samples the server trains on each round.
+#   0 = auto: max(500, num_classes * 30).
+# server-epochs: how many epochs the server trains on root data per round.
+#   0 = 1 (paper-faithful single epoch). Override for experimentation only.
+# root-batch-size: mini-batch size for the server's root training (decoupled from root-size
+#   so the server does multiple gradient steps per round, matching client update magnitude).
+# server-lr: learning rate for the server's root training.
+fltrust-root-size = 0
+fltrust-server-epochs = 0
+fltrust-root-batch-size = 32
+fltrust-server-lr = 0.1
+
 
 
 
