@@ -28,6 +28,15 @@ dependencies = [
     "torchvision==0.23.0",
 ]
 
+[project.optional-dependencies]
+dashboard = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
+]
+
+[project.scripts]
+dynamic-fl-dashboard = "dashboard.app:main"
+
 
 
 # --------------------------------------------------------
@@ -76,6 +85,7 @@ artifact-dir = ""
 # --------------------------------------------------------
 # I use these keys as convenience overrides from the CLI.
 # Example: `./run.sh --run-config 'attack-preset="stress"'`
+# Empty string = no override; the [tool.flwr.attack] preset is used.
 attack-preset = ""
 
 
@@ -132,6 +142,25 @@ fltrust-server-epochs = 0
 fltrust-root-batch-size = 32
 fltrust-server-lr = 0.1
 
+# Trust-strategy knobs (only used by the matching strategies).
+# Shared trust aggregation controls:
+# - trust-aggregation-strength = 0.0 means pure FedAvg with trust logging.
+# - trust-aggregation-strength = 1.0 means full trust weighting/filtering.
+# - trust-min-weight keeps low-trust clients from being completely removed by default,
+#   which helps benign non-IID accuracy. Set to 0 for hard filtering experiments.
+# - trust-warmup-rounds uses FedAvg-style weighting for the first N rounds so
+#   history/reputation-based scores do not overreact to cold-start noise.
+trust-aggregation-strength = 0.15
+trust-min-weight = 0.75
+trust-warmup-rounds = 5
+# foolsgold: historical update-similarity trust weighting.
+# flram: credibility score from robust norm, direction, and sign agreement.
+# mab-rfl: reputation/history-weighted trust aggregation.
+flram-min-score = 0.05
+mab-rfl-reputation-decay = 0.8
+mab-rfl-current-weight = 0.5
+mab-rfl-min-score = 0.05
+
 
 
 
@@ -155,6 +184,10 @@ fltrust-server-lr = 0.1
 #   - krum               (optional: num-malicious-nodes=0)
 #   - multikrum          (optional: num-malicious-nodes=0 num-nodes-to-select=1)
 #   - bulyan             (optional: num-malicious-nodes=0)
+#   - fltrust            (trust bootstrapping with a clean root dataset)
+#   - foolsgold          (historical similarity/diversity trust weighting)
+#   - flram              (credibility-weighted robust aggregation)
+#   - mab-rfl            (reputation/adaptive trust weighting)
 #
 # Common sampling knobs (defaults shown):
 #   fraction-train=1.0
@@ -595,9 +628,9 @@ attack_name = "none"
 
 
 # Optional global windows: if I provide these, attacks only apply within these intervals.
-# I use this for delayed-onset experiments (start attacking later in the run).
+# Default to attacking from the beginning; use CLI overrides for delayed-onset experiments.
 [[tool.flwr.attack.windows]]
-start_round = 15
+start_round = 1
 end_round = 30
 
 

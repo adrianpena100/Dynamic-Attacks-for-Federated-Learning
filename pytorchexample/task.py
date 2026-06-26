@@ -82,21 +82,6 @@ class LayerMultiplierSchedule:
 
 
 @dataclass(frozen=True)
-class DefenseConfig:
-    """Server-side defense knobs (optional).
-
-    Implemented as a pre-aggregation filter on client updates.
-    """
-
-    enabled: bool = False
-    mode: str = "none"  # none|norm_mad
-    drop_non_finite: bool = True
-    mad_z: float = 3.5
-    max_reject_fraction: float = 0.2
-    min_clients_after_filter: int = 2
-
-
-@dataclass(frozen=True)
 class GaussianNoiseAttackConfig:
     enabled: bool = True
     sigma: float = 0.5
@@ -311,9 +296,24 @@ def load_attack_config(*, run_config: Dict[str, Any]) -> AttackConfig:
         data = _read_toml(pyproject)
         attack = ((data.get("tool") or {}).get("flwr") or {}).get("attack") or {}
 
+    def parse_bool_value(value: Any, default: bool) -> bool:
+        if isinstance(value, bool):
+            return bool(value)
+        if isinstance(value, (int, float)):
+            return bool(value)
+        if isinstance(value, str):
+            s = value.strip().lower()
+            if s in {"", "none", "null"}:
+                return bool(default)
+            if s in {"1", "true", "yes", "y", "on", "enabled", "enable"}:
+                return True
+            if s in {"0", "false", "no", "n", "off", "disabled", "disable"}:
+                return False
+        return bool(default)
+
     def get_bool(key: str, default: bool) -> bool:
         v = attack.get(key, default)
-        return bool(v)
+        return parse_bool_value(v, default)
 
     def get_int(key: str, default: int) -> int:
         v = attack.get(key, default)
@@ -562,8 +562,8 @@ def load_attack_config(*, run_config: Dict[str, Any]) -> AttackConfig:
     # Only apply overrides when the provided value is meaningful.
     if "attack-enabled" in run_config:
         v = run_config.get("attack-enabled")
-        if isinstance(v, bool):
-            enabled = bool(v)
+        if not (isinstance(v, str) and not v.strip()):
+            enabled = parse_bool_value(v, enabled)
     if "attack-preset" in run_config:
         preset = str(run_config.get("attack-preset") or preset).strip().lower()
     if "attack-seed" in run_config:
@@ -638,8 +638,8 @@ def load_attack_config(*, run_config: Dict[str, Any]) -> AttackConfig:
             selection_mode = v
     if "attack-deterministic-per-round" in run_config:
         v = run_config.get("attack-deterministic-per-round")
-        if isinstance(v, bool):
-            deterministic_per_round = bool(v)
+        if not (isinstance(v, str) and not v.strip()):
+            deterministic_per_round = parse_bool_value(v, deterministic_per_round)
 
     # Optional selection policy overrides via run_config
     if "attack-sticky-rounds" in run_config:
@@ -789,8 +789,8 @@ def load_attack_config(*, run_config: Dict[str, Any]) -> AttackConfig:
             pass
     if "attack-intensity-fail-escalation" in run_config:
         v = run_config.get("attack-intensity-fail-escalation")
-        if isinstance(v, bool):
-            intensity_fail_escalation = bool(v)
+        if not (isinstance(v, str) and not v.strip()):
+            intensity_fail_escalation = parse_bool_value(v, intensity_fail_escalation)
     if "attack-intensity-fail-multiplier-step" in run_config:
         v = run_config.get("attack-intensity-fail-multiplier-step")
         try:
@@ -805,6 +805,25 @@ def load_attack_config(*, run_config: Dict[str, Any]) -> AttackConfig:
             fv = float(v)
             if fv >= 1.0:
                 intensity_fail_multiplier_max = fv
+        except Exception:
+            pass
+
+    if "attack-stealth-mode" in run_config:
+        v = run_config.get("attack-stealth-mode")
+        if not (isinstance(v, str) and not v.strip()):
+            stealth_mode = parse_bool_value(v, stealth_mode)
+    if "attack-stealth-norm-quantile" in run_config:
+        try:
+            fv = float(run_config.get("attack-stealth-norm-quantile"))
+            if 0.0 < fv <= 1.0:
+                stealth_norm_quantile = fv
+        except Exception:
+            pass
+    if "attack-stealth-norm-multiplier" in run_config:
+        try:
+            fv = float(run_config.get("attack-stealth-norm-multiplier"))
+            if fv > 0.0:
+                stealth_norm_multiplier = fv
         except Exception:
             pass
 
@@ -1106,6 +1125,13 @@ def load_attack_config(*, run_config: Dict[str, Any]) -> AttackConfig:
 
     apply_preset(preset)
 
+    # Presets intentionally override TOML defaults, but an explicit run_config
+    # attack-enabled value should still be the final on/off switch for sweeps.
+    if "attack-enabled" in run_config:
+        v = run_config.get("attack-enabled")
+        if not (isinstance(v, str) and not v.strip()):
+            enabled = parse_bool_value(v, enabled)
+
     # Defaults if empty
     if not weights:
         weights = {
@@ -1190,58 +1216,6 @@ def load_attack_config(*, run_config: Dict[str, Any]) -> AttackConfig:
         layer_multiplier_schedules=layer_multiplier_schedules,
     )
 
-
-def load_defense_config(*, run_config: Dict[str, Any]) -> DefenseConfig:
-    """Load server-side defense config from pyproject.toml.
-
-    `run_config` is accepted for future CLI overrides; currently only `defense-enabled`
-    is supported as a convenience.
-    """
-
-    root = _find_project_root()
-    pyproject = root / "pyproject.toml"
-    defense: Dict[str, Any] = {}
-    if pyproject.exists():
-        data = _read_toml(pyproject)
-        defense = ((data.get("tool") or {}).get("flwr") or {}).get("defense") or {}
-
-    def get_bool(key: str, default: bool) -> bool:
-        try:
-            return bool(defense.get(key, default))
-        except Exception:
-            return bool(default)
-
-    def get_int(key: str, default: int) -> int:
-        try:
-            return int(defense.get(key, default))
-        except Exception:
-            return int(default)
-
-    def get_float(key: str, default: float) -> float:
-        try:
-            return float(defense.get(key, default))
-        except Exception:
-            return float(default)
-
-    enabled = get_bool("enabled", False)
-    mode = str(defense.get("mode", "none") or "none").strip().lower()
-    drop_non_finite = get_bool("drop_non_finite", True)
-    mad_z = get_float("mad_z", 3.5)
-    max_reject_fraction = get_float("max_reject_fraction", 0.2)
-    min_clients_after_filter = get_int("min_clients_after_filter", 2)
-
-    # Optional override from Flower run_config
-    if "defense-enabled" in run_config and isinstance(run_config.get("defense-enabled"), bool):
-        enabled = bool(run_config.get("defense-enabled"))
-
-    return DefenseConfig(
-        enabled=bool(enabled),
-        mode=str(mode or "none"),
-        drop_non_finite=bool(drop_non_finite),
-        mad_z=float(max(0.0, mad_z)),
-        max_reject_fraction=float(max(0.0, min(1.0, max_reject_fraction))),
-        min_clients_after_filter=int(max(0, min_clients_after_filter)),
-    )
 
 
 def _round_in_windows(server_round: int, windows: List[AttackWindow]) -> bool:
@@ -3665,7 +3639,7 @@ def get_dataset_spec(dataset: str) -> DatasetSpec:
             modality="vision",
             image_key="image",
             input_channels=1,
-            central_eval_split="test",
+            central_eval_split="train",
         )
 
     # Known recommended datasets (cataloged) - these will rely on auto key inference
@@ -3885,6 +3859,10 @@ def _resolve_spec(
     if modality == "auto":
         modality = str(base.modality).strip().lower()
 
+    resolved_eval_split = str(eval_split or base.central_eval_split)
+    if base.dataset == "flwrlabs/femnist" and resolved_eval_split in {"test", "validation"}:
+        resolved_eval_split = str(base.central_eval_split)
+
     # Start with base and apply splits/modality/overrides.
     spec = DatasetSpec(
         dataset=base.dataset,
@@ -3896,7 +3874,7 @@ def _resolve_spec(
         text_key=base.text_key,
         audio_key=base.audio_key,
         train_split=str(train_split or base.train_split),
-        central_eval_split=str(eval_split or base.central_eval_split),
+        central_eval_split=resolved_eval_split,
     )
 
     # Apply key overrides
@@ -4084,6 +4062,7 @@ def load_data(
                 num_partitions=num_partitions,
                 partition_by=spec.label_key,
                 alpha=dirichlet_alpha,
+                seed=42,
             )
         else:
             raise ValueError(
@@ -4199,7 +4178,7 @@ def load_centralized_dataset(
         trust_remote_code=bool(hf_trust_remote_code),
     )
 
-    split = eval_split or spec.central_eval_split
+    split = spec.central_eval_split
     ds_kwargs: Dict[str, Any] = {"trust_remote_code": bool(hf_trust_remote_code)}
     if dataset_subset:
         ds_kwargs["name"] = dataset_subset
@@ -4704,7 +4683,7 @@ def train(net, trainloader, epochs, lr, device, *, attack: Optional[Dict[str, An
             loss.backward()
             optimizer.step()
             running_loss += loss.item()
-    avg_trainloss = running_loss / len(trainloader)
+    avg_trainloss = running_loss / (len(trainloader) * epochs)
     poison_stats = {
         "examples_seen": int(poison_examples_seen),
         "poisoned_examples": int(poison_examples_poisoned),
@@ -4716,9 +4695,15 @@ def train(net, trainloader, epochs, lr, device, *, attack: Optional[Dict[str, An
 
 def test(net, testloader, device):
     """Validate the model on the test set."""
+    from sklearn.metrics import precision_recall_fscore_support
+
     net.to(device)
     criterion = torch.nn.CrossEntropyLoss()
     correct, loss = 0, 0.0
+    class_correct: Dict[int, int] = {}
+    class_total: Dict[int, int] = {}
+    all_labels: list = []
+    all_preds: list = []
     with torch.no_grad():
         for batch in testloader:
             if "img" in batch:
@@ -4728,10 +4713,37 @@ def test(net, testloader, device):
             labels = batch["label"].to(device)
             outputs = net(inputs)
             loss += criterion(outputs, labels).item()
-            correct += (torch.max(outputs.data, 1)[1] == labels).sum().item()
+            preds = torch.max(outputs.data, 1)[1]
+            correct += (preds == labels).sum().item()
+            batch_labels = labels.tolist()
+            batch_preds = preds.tolist()
+            all_labels.extend(batch_labels)
+            all_preds.extend(batch_preds)
+            for lbl, pred in zip(batch_labels, batch_preds):
+                class_total[lbl] = class_total.get(lbl, 0) + 1
+                if lbl == pred:
+                    class_correct[lbl] = class_correct.get(lbl, 0) + 1
     accuracy = correct / len(testloader.dataset)
     loss = loss / len(testloader)
-    return loss, accuracy
+    per_class_acc = {
+        c: class_correct.get(c, 0) / class_total[c]
+        for c in sorted(class_total)
+    }
+    p_macro, r_macro, f1_macro, _ = precision_recall_fscore_support(
+        all_labels, all_preds, average="macro", zero_division=0,
+    )
+    p_weighted, r_weighted, f1_weighted, _ = precision_recall_fscore_support(
+        all_labels, all_preds, average="weighted", zero_division=0,
+    )
+    clf_metrics = {
+        "f1_macro": float(f1_macro),
+        "f1_weighted": float(f1_weighted),
+        "precision_macro": float(p_macro),
+        "precision_weighted": float(p_weighted),
+        "recall_macro": float(r_macro),
+        "recall_weighted": float(r_weighted),
+    }
+    return loss, accuracy, per_class_acc, clf_metrics
 
 
 def test_backdoor(

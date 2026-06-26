@@ -36,11 +36,9 @@ if [[ ! -d "$RUN_OUTPUT_DIR" ]]; then
 fi
 
 if [[ -d "$RUN_OUTPUT_DIR" ]]; then
-  # Run LLM analysis and place markdown in a subfolder
-  ANALYSIS_DIR="$RUN_OUTPUT_DIR/llm_analysis"
-  mkdir -p "$ANALYSIS_DIR"
-  "$PYTHON_BIN" "$ROOT_DIR/scripts/llm_sweep_analysis.py" --sweeps-root "$RUN_OUTPUT_DIR" --output-dir "$ANALYSIS_DIR" --single-run --call-api
-  echo "LLM analysis written to: $ANALYSIS_DIR"
+  # Run LLM analysis for this run directory using the script's current CLI.
+  "$PYTHON_BIN" "$ROOT_DIR/scripts/llm_sweep_analysis.py" --sweeps-root "$RUN_OUTPUT_DIR" --call-api
+  echo "LLM analysis written inside: $RUN_OUTPUT_DIR"
 else
   echo "Warning: Could not determine run output directory for LLM analysis." >&2
 fi

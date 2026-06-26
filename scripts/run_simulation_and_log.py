@@ -2067,6 +2067,107 @@ def _maybe_write_research_plots(run_dir: Path) -> None:
     except Exception:
         pass
 
+    # ----------------------------------
+    # H) Trust strategy diagnostics
+    # ----------------------------------
+    try:
+        trust_rows = _read_csv(summaries_dir / "trust_strategy_by_round.csv")
+        if trust_rows:
+            trust_by_round: Dict[int, List[float]] = defaultdict(list)
+            selected_by_round: Dict[int, int] = defaultdict(int)
+            total_by_round: Dict[int, int] = defaultdict(int)
+            trust_by_client_round: Dict[int, Dict[int, float]] = defaultdict(dict)
+            strategy_name = ""
+            for row in trust_rows:
+                rnd = _parse_int(row.get("round"), 0)
+                cid = _parse_int(row.get("client_id"), -1)
+                if rnd <= 0 or cid < 0:
+                    continue
+                score = _safe_float(row.get("trust_score"), default=float("nan"))
+                if not math.isfinite(score):
+                    continue
+                selected = str(row.get("selected_for_aggregation") or "0").strip() in {"1", "true", "True"}
+                trust_by_round[rnd].append(float(score))
+                trust_by_client_round[rnd][cid] = float(score)
+                total_by_round[rnd] += 1
+                if selected:
+                    selected_by_round[rnd] += 1
+                if not strategy_name:
+                    strategy_name = str(row.get("strategy") or "trust")
+
+            rounds_trust = sorted(trust_by_round.keys())
+            if rounds_trust:
+                xs = rounds_trust
+                avg_trust = [float(np.mean(trust_by_round[r])) for r in xs]
+                min_trust = [float(np.min(trust_by_round[r])) for r in xs]
+                max_trust = [float(np.max(trust_by_round[r])) for r in xs]
+
+                fig = plt.figure(figsize=(12.5, 4.6))
+                ax = fig.add_subplot(1, 1, 1)
+                ax.fill_between(xs, min_trust, max_trust, color="#9ecae1", alpha=0.35, label="min-max trust")
+                (line,) = ax.plot(xs, avg_trust, color="#08519c", marker="o", markersize=3.2, label="average trust")
+                _outline_line(line, stroke=3.4)
+                ax.set_title(f"Trust scores over time ({strategy_name})")
+                ax.set_xlabel("Round")
+                ax.set_ylabel("Trust score")
+                ax.set_ylim(0.0, 1.02)
+                ax.legend(loc="best", frameon=False)
+                fig.tight_layout()
+                fig.savefig(plots_dir / "trust_scores_over_time.png", bbox_inches="tight")
+                plt.close(fig)
+
+                fig = plt.figure(figsize=(12.5, 4.4))
+                ax = fig.add_subplot(1, 1, 1)
+                selected_vals = [int(selected_by_round.get(r, 0)) for r in xs]
+                total_vals = [int(total_by_round.get(r, 0)) for r in xs]
+                ax.bar(xs, total_vals, color="#c7c7c7", edgecolor="black", linewidth=0.4, label="scored clients")
+                ax.bar(xs, selected_vals, color="#31a354", edgecolor="black", linewidth=0.4, label="trusted/used clients")
+                ax.set_title(f"Trust strategy aggregation coverage ({strategy_name})")
+                ax.set_xlabel("Round")
+                ax.set_ylabel("# clients")
+                ax.legend(loc="best", frameon=False)
+                fig.tight_layout()
+                fig.savefig(plots_dir / "trust_selected_count_over_time.png", bbox_inches="tight")
+                plt.close(fig)
+
+                client_ids = sorted({cid for per in trust_by_client_round.values() for cid in per.keys()})
+                if client_ids and len(client_ids) <= 200:
+                    matrix = np.full((len(client_ids), len(xs)), np.nan, dtype=float)
+                    cid_to_i = {cid: i for i, cid in enumerate(client_ids)}
+                    for j, rnd in enumerate(xs):
+                        for cid, score in trust_by_client_round.get(rnd, {}).items():
+                            i = cid_to_i.get(cid)
+                            if i is not None:
+                                matrix[i, j] = float(score)
+
+                    fig = plt.figure(figsize=(max(9.5, 0.38 * len(xs) + 4), max(5.0, 0.18 * len(client_ids) + 3)))
+                    ax = fig.add_subplot(1, 1, 1)
+                    im = ax.imshow(matrix, aspect="auto", vmin=0.0, vmax=1.0, cmap="viridis")
+                    ax.set_title(f"Per-client trust heatmap ({strategy_name})")
+                    ax.set_xlabel("Round")
+                    ax.set_ylabel("Client ID")
+                    if len(xs) <= 30:
+                        xt = list(range(len(xs)))
+                    else:
+                        step = max(1, len(xs) // 15)
+                        xt = list(range(0, len(xs), step))
+                    ax.set_xticks(xt)
+                    ax.set_xticklabels([str(xs[i]) for i in xt])
+                    if len(client_ids) <= 50:
+                        yt = list(range(len(client_ids)))
+                    else:
+                        step = max(1, len(client_ids) // 25)
+                        yt = list(range(0, len(client_ids), step))
+                    ax.set_yticks(yt)
+                    ax.set_yticklabels([str(client_ids[i]) for i in yt])
+                    cbar = fig.colorbar(im, ax=ax)
+                    cbar.set_label("Trust score")
+                    fig.tight_layout()
+                    fig.savefig(plots_dir / "trust_per_client_heatmap.png", bbox_inches="tight")
+                    plt.close(fig)
+    except Exception:
+        pass
+
     # Copy plots into graphs/summaries for convenience.
     try:
         graphs_summaries_dir = run_dir / "graphs" / "summaries"
@@ -2080,6 +2181,9 @@ def _maybe_write_research_plots(run_dir: Path) -> None:
             "defense_selection_breakdown.png",
             "defense_malicious_fraction_vs_accuracy.png",
             "per_client_eval_loss_distribution.png",
+            "trust_scores_over_time.png",
+            "trust_selected_count_over_time.png",
+            "trust_per_client_heatmap.png",
         ):
             src = plots_dir / name
             if src.exists():
@@ -2271,6 +2375,49 @@ def _parse_run_config_overrides(run_config: Optional[str]) -> Dict[str, str]:
         if k:
             overrides[k] = v
     return overrides
+
+
+def _write_activated_config_artifacts(
+    *,
+    run_dir: Path,
+    project_root: Path,
+    final_run_config: str,
+) -> None:
+    """Persist the exact config inputs used for this run.
+
+    Flower receives defaults from pyproject.toml plus the final --run-config
+    string. The attack engine also writes its resolved semantic config into
+    summaries/run_config_and_summary.json after the run starts; these files make
+    the runner-side inputs easy to audit before reading parsed metrics.
+    """
+
+    config_dir = run_dir / "configs"
+    config_dir.mkdir(parents=True, exist_ok=True)
+
+    (config_dir / "activated_run_config.txt").write_text(
+        str(final_run_config or "").strip() + "\n",
+        encoding="utf-8",
+    )
+
+    parsed = _parse_run_config_overrides(final_run_config)
+    lines = [
+        "# Final Flower --run-config overrides for this run.",
+        "# Values are written as strings because Flower performs its own TOML/run-config parsing.",
+    ]
+    for key in sorted(parsed.keys()):
+        val = str(parsed[key]).replace("\\", "\\\\").replace('"', '\\"')
+        lines.append(f'{key} = "{val}"')
+    (config_dir / "activated_overrides.toml").write_text(
+        "\n".join(lines) + "\n",
+        encoding="utf-8",
+    )
+
+    pyproject = project_root / "pyproject.toml"
+    if pyproject.exists():
+        try:
+            shutil.copy2(pyproject, config_dir / "pyproject.snapshot.toml")
+        except Exception:
+            pass
 
 
 def _safe_literal_dict(value: str) -> Optional[Dict[str, Any]]:
@@ -2683,6 +2830,8 @@ def run_flwr_streaming(
     federation: Optional[str],
     run_config: Optional[str],
     stdout_log_path: Path,
+    *,
+    live_output_stream = None,
 ) -> Tuple[int, ParseState]:
     """Run Flower and stream logs to the terminal while parsing metrics."""
 
@@ -2729,6 +2878,7 @@ def run_flwr_streaming(
             parts.append(p)
     env["PATH"] = ":".join(parts)
 
+    out_stream = live_output_stream or sys.stdout
     state = ParseState()
     with stdout_log_path.open("w", encoding="utf-8") as log_f:
         proc = subprocess.Popen(
@@ -2754,8 +2904,8 @@ def run_flwr_streaming(
 
             # Print like a normal run, but suppress known-noisy lines.
             if not any(s in line for s in suppress_live_substrings):
-                sys.stdout.write(line)
-                sys.stdout.flush()
+                out_stream.write(line)
+                out_stream.flush()
 
             # Tee into log file
             # Parse metrics
@@ -2798,6 +2948,11 @@ def main() -> int:
         type=Path,
         default=None,
         help="Path to an existing logs/<run>/ folder to regenerate metrics/graphs from stdout.log.",
+    )
+    parser.add_argument(
+        "--print-log-dir",
+        action="store_true",
+        help="Print only the resolved run log directory to stdout while sending live logs to stderr.",
     )
 
     args = parser.parse_args()
@@ -2861,6 +3016,18 @@ def main() -> int:
         run_dir = logs_root / f"{strategy_slug}__{iid_flag}__{timestamp}"
     run_dir.mkdir(parents=True, exist_ok=False)
 
+    # Capture runtime package versions for reproducibility
+    _versions: dict = {}
+    for _pkg_name, _import_name in [
+        ("torch", "torch"), ("flwr", "flwr"),
+        ("flwr_datasets", "flwr_datasets"), ("numpy", "numpy"),
+    ]:
+        try:
+            _mod = __import__(_import_name)
+            _versions[_pkg_name] = getattr(_mod, "__version__", "unknown")
+        except Exception:
+            pass
+
     # Save run metadata
     (run_dir / "meta.json").write_text(
         json.dumps(
@@ -2873,6 +3040,7 @@ def main() -> int:
                 "federation": args.federation,
                 "run_config": args.run_config,
                 "resolved_config_for_naming": resolved_for_naming,
+                "versions": _versions,
             },
             indent=2,
             sort_keys=True,
@@ -2894,8 +3062,19 @@ def main() -> int:
     else:
         run_config = artifact_kv
 
+    _write_activated_config_artifacts(
+        run_dir=run_dir,
+        project_root=project_root,
+        final_run_config=str(run_config or ""),
+    )
+
+    live_output_stream = sys.stderr if args.print_log_dir else sys.stdout
     return_code, state = run_flwr_streaming(
-        project_root, args.federation, run_config, stdout_log_path
+        project_root,
+        args.federation,
+        run_config,
+        stdout_log_path,
+        live_output_stream=live_output_stream,
     )
     # Stderr is merged into stdout for faithful live output.
     stderr_log_path.write_text("", encoding="utf-8")
@@ -2907,9 +3086,11 @@ def main() -> int:
     _maybe_write_attack_summary_md(run_dir)
     _maybe_write_research_plots(run_dir)
 
-    # Print a short summary for humans
-    print(f"Run folder: {run_dir}")
-    print(f"Exit code: {return_code}")
+    # Print a short summary for humans.
+    # In --print-log-dir mode, keep stdout machine-readable for the caller.
+    summary_stream = sys.stderr if args.print_log_dir else sys.stdout
+    print(f"Run folder: {run_dir}", file=summary_stream)
+    print(f"Exit code: {return_code}", file=summary_stream)
     for phase, metrics in parsed.series.items():
         if not metrics:
             continue
@@ -2919,18 +3100,22 @@ def main() -> int:
             "evaluate_client": "client-side evaluate",
             "evaluate_server": "server-side evaluate",
         }.get(phase, phase)
-        print(f"Parsed {label} metrics: {metric_list}")
+        print(f"Parsed {label} metrics: {metric_list}", file=summary_stream)
     if parsed.sampling:
-        print("Parsed per-round sampling counts (and IDs if present in logs).")
+        print("Parsed per-round sampling counts (and IDs if present in logs).", file=summary_stream)
     if not parsed.per_client:
         print(
             "Per-client curves not generated (no per-client metrics found). "
-            "Enable with: --run-config \"emit-client-metrics=true\""
+            "Enable with: --run-config \"emit-client-metrics=true\"",
+            file=summary_stream,
         )
     if graphs_dir is None:
         print(
-            "Graphs not generated (matplotlib missing). Install with: pip install matplotlib"
+            "Graphs not generated (matplotlib missing). Install with: pip install matplotlib",
+            file=summary_stream,
         )
+    if args.print_log_dir:
+        print(str(run_dir))
 
     return return_code
 

@@ -247,6 +247,49 @@ def _summarize_round_attack_stats(run_dir: Path) -> Dict[str, Any]:
     }
 
 
+def _summarize_trust_strategy(run_dir: Path) -> Dict[str, Any]:
+    path = run_dir / "summaries" / "trust_strategy_by_round.csv"
+    if not path.exists():
+        return {"trust_strategy_rows": 0}
+
+    rows = 0
+    strategies: Counter[str] = Counter()
+    trust_vals: List[float] = []
+    per_round_scores: Dict[int, List[float]] = {}
+    per_round_selected: Dict[int, List[float]] = {}
+    with path.open("r", newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            rows += 1
+            strategies[str(row.get("strategy") or "trust")] += 1
+            score = _safe_float(row.get("trust_score"))
+            selected = _safe_float(row.get("selected_for_aggregation"))
+            try:
+                rnd = int(float(row.get("round") or 0))
+            except Exception:
+                rnd = 0
+            if score is not None:
+                trust_vals.append(float(score))
+                if rnd > 0:
+                    per_round_scores.setdefault(rnd, []).append(float(score))
+            if selected is not None and rnd > 0:
+                per_round_selected.setdefault(rnd, []).append(float(selected))
+
+    avg_trust_by_round = [
+        float(sum(vals) / len(vals)) for _rnd, vals in sorted(per_round_scores.items()) if vals
+    ]
+    selected_frac_by_round = [
+        float(sum(vals) / len(vals)) for _rnd, vals in sorted(per_round_selected.items()) if vals
+    ]
+    return {
+        "trust_strategy_rows": int(rows),
+        "trust_strategy_counts": dict(strategies.most_common()),
+        "trust_score": _series_stats(trust_vals),
+        "trust_avg_by_round": _series_stats(avg_trust_by_round),
+        "trust_selected_fraction_by_round": _series_stats(selected_frac_by_round),
+    }
+
+
 def _parse_run_summary_json(run_dir: Path) -> Dict[str, Any]:
     path = run_dir / "summaries" / "run_config_and_summary.json"
     if not path.exists():
@@ -283,6 +326,7 @@ def _build_run_record(run_dir: Path) -> Dict[str, Any]:
     rec.update(_summarize_attack_log(run_dir))
     rec.update(_summarize_defense_selection(run_dir))
     rec.update(_summarize_round_attack_stats(run_dir))
+    rec.update(_summarize_trust_strategy(run_dir))
     rec.update(_parse_run_summary_json(run_dir))
 
     acc_vals = _read_metric_series(run_dir / "metrics" / "evaluate_server__accuracy.csv")
@@ -304,6 +348,8 @@ def _aggregate_strategy(strategy_dir: Path) -> Dict[str, Any]:
     run_dirs = [
         p for p in sorted(strategy_dir.iterdir()) if p.is_dir() and p.name.startswith("S") and "__" in p.name
     ]
+    if not run_dirs and (strategy_dir / "meta.json").exists():
+        run_dirs = [strategy_dir]
 
     run_records = [_build_run_record(r) for r in run_dirs]
     accs = [float(r["final_acc"]) for r in run_records if r.get("final_acc") is not None]
@@ -319,6 +365,12 @@ def _aggregate_strategy(strategy_dir: Path) -> Dict[str, Any]:
     )[:10]
 
     strategy_name = strategy_dir.name.split("_thesis_full__")[0].lower()
+    if len(run_dirs) == 1 and run_dirs[0] == strategy_dir:
+        try:
+            meta = json.loads((strategy_dir / "meta.json").read_text(encoding="utf-8"))
+            strategy_name = str(meta.get("strategy") or strategy_name).lower()
+        except Exception:
+            pass
     supports_malicious_selection = strategy_name in {"multikrum", "krum"}
     def _deadliest_run_entry(r):
         entry = {
@@ -355,6 +407,8 @@ def _aggregate_strategy(strategy_dir: Path) -> Dict[str, Any]:
 
 
 def _find_strategy_dirs(root: Path) -> List[Path]:
+    if (root / "meta.json").exists():
+        return [root]
     if (root / "sweep_settings.csv").exists():
         return [root]
     found = {p.parent for p in root.rglob("sweep_settings.csv")}

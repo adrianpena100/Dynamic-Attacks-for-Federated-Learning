@@ -1,5 +1,8 @@
 """pytorchexample: A Flower / PyTorch app."""
 
+import random
+
+import numpy as np
 import torch
 from flwr.app import ArrayRecord, Context, Message, MetricRecord, RecordDict
 from flwr.clientapp import ClientApp
@@ -15,6 +18,12 @@ app = ClientApp()
 @app.train()
 def train(msg: Message, context: Context):
     """Train the model on local data."""
+
+    _global_seed = int(context.run_config.get("attack-seed", -1))
+    if _global_seed >= 0:
+        random.seed(_global_seed)
+        np.random.seed(_global_seed)
+        torch.manual_seed(_global_seed)
 
     # Load the model and initialize it with the received weights
     spec, model_factory = get_task_from_run_config(dict(context.run_config))
@@ -224,6 +233,12 @@ def train(msg: Message, context: Context):
 def evaluate(msg: Message, context: Context):
     """Evaluate the model on local data."""
 
+    _global_seed = int(context.run_config.get("attack-seed", -1))
+    if _global_seed >= 0:
+        random.seed(_global_seed)
+        np.random.seed(_global_seed)
+        torch.manual_seed(_global_seed)
+
     # Load the model and initialize it with the received weights
     spec, model_factory = get_task_from_run_config(dict(context.run_config))
     model = model_factory()
@@ -273,7 +288,7 @@ def evaluate(msg: Message, context: Context):
     )
 
     # Call the evaluation function
-    eval_loss, eval_acc = test_fn(
+    eval_loss, eval_acc, _per_class, _clf = test_fn(
         model,
         valloader,
         device,

@@ -15,7 +15,7 @@ PARTITIONER=""
 DIRICHLET_ALPHA=""
 FEDERATION=""
 STRATEGY=""
-STRATEGIES="bulyan,multikrum,fedtrimmedavg"
+STRATEGIES="bulyan,multikrum,fedtrimmedavg,fedmedian,fltrust,foolsgold,flram,mab-rfl"
 SWEEPS_FILE="$ROOT_DIR/docs/thesis_sweeps.conf"
 REPEATS=1
 SEEDS=""
@@ -27,6 +27,7 @@ INIT_TIMEOUT=600
 MAX_RETRIES=2
 AUTO_LLM_SWEEP_ANALYSIS=0
 LLM_ANALYSIS_MODEL=""
+TRUST_LEVEL="full"
 
 csv_escape() {
   local v="$1"
@@ -48,6 +49,15 @@ normalize_strategy() {
     fltrust|fl-trust|fl_trust)
       printf 'fltrust'
       ;;
+    foolsgold|fools-gold|fools_gold)
+      printf 'foolsgold'
+      ;;
+    flram|flram-lite|flram_lite)
+      printf 'flram'
+      ;;
+    mabrfl|mab-rfl|mab_rfl)
+      printf 'mab-rfl'
+      ;;
     *)
       printf '%s' "$lower"
       ;;
@@ -56,7 +66,7 @@ normalize_strategy() {
 
 usage() {
   cat <<EOF
-Usage: ./run_thesis_sweep.sh [--name NAME] [--dataset DATASET] [--partitioner NAME] [--dirichlet-alpha VAL] [--federation NAME] [--strategy NAME] [--strategies CSV] [--sweeps-file PATH] [--repeats N] [--seeds CSV] [--from-label LABEL] [--stamp YYYY-mm-dd_HH-MM-SS] [--extra-config 'key=val ...'] [--round-timeout SECS] [--init-timeout SECS] [--max-retries N] [--llm-analysis] [--llm-model NAME]
+Usage: ./run_thesis_sweep.sh [--name NAME] [--dataset DATASET] [--partitioner NAME] [--dirichlet-alpha VAL] [--federation NAME] [--strategy NAME] [--strategies CSV] [--sweeps-file PATH] [--repeats N] [--seeds CSV] [--from-label LABEL] [--stamp YYYY-mm-dd_HH-MM-SS] [--extra-config 'key=val ...'] [--round-timeout SECS] [--init-timeout SECS] [--max-retries N] [--trust-level weak|medium|full] [--llm-analysis] [--llm-model NAME]
 
 Runs thesis sweeps sequentially across one or more strategies.
 
@@ -64,6 +74,7 @@ Defaults:
   --strategies bulyan,multikrum,fedtrimmedavg
   --sweeps-file docs/thesis_sweeps.conf
   --repeats 1
+  --trust-level full   (weak=0.15/0.75, medium=0.6/0.3, full=1.0/0.0)
 
 Examples:
   ./run_thesis_sweep.sh --name thesis_balanced --repeats 3
@@ -140,6 +151,10 @@ while [[ $# -gt 0 ]]; do
       MAX_RETRIES="$2"
       shift 2
       ;;
+    --trust-level)
+      TRUST_LEVEL="$2"
+      shift 2
+      ;;
     --llm-analysis)
       AUTO_LLM_SWEEP_ANALYSIS=1
       shift 1
@@ -164,6 +179,16 @@ if ! [[ "$REPEATS" =~ ^[0-9]+$ ]] || [[ "$REPEATS" -lt 1 ]]; then
   echo "Error: --repeats must be an integer >= 1" >&2
   exit 1
 fi
+
+case "$TRUST_LEVEL" in
+  weak)   TRUST_STRENGTH=0.15; TRUST_MIN_WEIGHT=0.75; TRUST_WARMUP=5 ;;
+  medium) TRUST_STRENGTH=0.6;  TRUST_MIN_WEIGHT=0.3;  TRUST_WARMUP=3 ;;
+  full)   TRUST_STRENGTH=1.0;  TRUST_MIN_WEIGHT=0.0;  TRUST_WARMUP=3 ;;
+  *)
+    echo "Error: --trust-level must be weak, medium, or full (got '$TRUST_LEVEL')" >&2
+    exit 1
+    ;;
+esac
 
 if [[ -n "$STAMP_OVERRIDE" ]]; then
   STAMP="$STAMP_OVERRIDE"
@@ -296,6 +321,157 @@ for strategy_name in "${RUN_STRATEGIES[@]}"; do
   fi
 
   echo "=== Strategy: ${strategy_name} ==="
+
+  # --- Clean baseline (no attacks) for this strategy ---
+  for ((rep=1; rep<=REPEATS; rep++)); do
+    seed_value="$(pick_seed "$rep")"
+    baseline_label="BASELINE_clean"
+    if [[ "$REPEATS" -gt 1 ]]; then
+      baseline_label="BASELINE_clean__rep$(printf '%02d' "$rep")"
+    fi
+
+    completed_key="${baseline_label}|${rep}"
+    if [[ "$COMPLETED_KEYS_STR" == *$'\n'"$completed_key"$'\n'* ]]; then
+      echo "Skipping completed: ${baseline_label} (${strategy_name})"
+      continue
+    fi
+
+    baseline_config="attack-preset=\"off\" strategy=\"${strategy_name}\" attack-seed=${seed_value}"
+
+    if [[ -n "$DATASET" ]]; then
+      baseline_config+=" dataset=\"${DATASET}\""
+    fi
+    if [[ -n "$PARTITIONER" ]]; then
+      baseline_config+=" partitioner=${PARTITIONER}"
+    fi
+    if [[ -n "$DIRICHLET_ALPHA" ]]; then
+      baseline_config+=" dirichlet-alpha=${DIRICHLET_ALPHA}"
+    fi
+    if [[ -n "$EXTRA_CONFIG" ]]; then
+      baseline_config+=" ${EXTRA_CONFIG}"
+    fi
+
+    if [[ "${strategy_name}" == "bulyan" ]]; then
+      baseline_config+=" num-malicious-nodes=24"
+    fi
+    if [[ "${strategy_name}" == "multikrum" ]]; then
+      baseline_config+=" num-malicious-nodes=25"
+    fi
+    if [[ "${strategy_name}" == "fedtrimmedavg" ]]; then
+      baseline_config+=" trimmed-beta=0.24"
+    fi
+    if [[ "${strategy_name}" == "fltrust" ]]; then
+      baseline_config+=" fltrust-root-size=1860 fltrust-root-batch-size=32 fltrust-server-lr=0.1"
+      baseline_config+=" max-train-examples=1860"
+      baseline_config+=" trust-aggregation-strength=${TRUST_STRENGTH} trust-min-weight=${TRUST_MIN_WEIGHT} trust-warmup-rounds=${TRUST_WARMUP}"
+    fi
+    if [[ "${strategy_name}" == "foolsgold" ]]; then
+      baseline_config+=" trust-aggregation-strength=${TRUST_STRENGTH} trust-min-weight=${TRUST_MIN_WEIGHT} trust-warmup-rounds=${TRUST_WARMUP}"
+    fi
+    if [[ "${strategy_name}" == "flram" ]]; then
+      baseline_config+=" trust-aggregation-strength=${TRUST_STRENGTH} trust-min-weight=${TRUST_MIN_WEIGHT} trust-warmup-rounds=${TRUST_WARMUP}"
+      baseline_config+=" flram-min-score=0.05"
+    fi
+    if [[ "${strategy_name}" == "mab-rfl" ]]; then
+      baseline_config+=" trust-aggregation-strength=${TRUST_STRENGTH} trust-min-weight=${TRUST_MIN_WEIGHT} trust-warmup-rounds=${TRUST_WARMUP}"
+      baseline_config+=" mab-rfl-reputation-decay=0.8 mab-rfl-current-weight=0.5 mab-rfl-min-score=0.05"
+    fi
+
+    baseline_config+=" fraction-evaluate=0.1 max-central-eval-examples=5000"
+
+    echo "=== ${baseline_label} (${strategy_name}) ==="
+
+    tmp_log="$(mktemp)"
+    run_ok=0
+    for ((attempt=1; attempt<=MAX_RETRIES+1; attempt++)); do
+      if [[ "$attempt" -gt 1 ]]; then
+        echo "Retry $((attempt-1))/${MAX_RETRIES} for ${baseline_label} (${strategy_name})"
+      fi
+      > "$tmp_log"
+
+      run_cmd=("$PYTHON_BIN" "$ROOT_DIR/scripts/run_simulation_and_log.py"
+        --project-root "$ROOT_DIR")
+      [[ -n "$FEDERATION" ]] && run_cmd+=(--federation "$FEDERATION")
+      run_cmd+=(--run-config "$baseline_config")
+
+      set +e
+      "${run_cmd[@]}" > "$tmp_log" 2>&1 &
+      run_pid=$!
+
+      tail -f "$tmp_log" 2>/dev/null &
+      tail_pid=$!
+
+      last_round=""
+      last_progress=$(date +%s)
+      init_phase=1
+      timed_out=0
+      while kill -0 "$run_pid" 2>/dev/null; do
+        sleep 10
+        cur_round=$(grep -oE '\[ROUND +[0-9]+' "$tmp_log" 2>/dev/null | tail -1 | grep -oE '[0-9]+$' || echo "")
+        now=$(date +%s)
+        if [[ -n "$cur_round" && "$cur_round" != "$last_round" ]]; then
+          last_round="$cur_round"
+          last_progress=$now
+          init_phase=0
+        fi
+        if [[ "$init_phase" -eq 1 ]]; then
+          effective_timeout=$INIT_TIMEOUT
+        else
+          effective_timeout=$ROUND_TIMEOUT
+        fi
+        if (( now - last_progress > effective_timeout )); then
+          echo "" >&2
+          if [[ "$init_phase" -eq 1 ]]; then
+            echo "WARNING: Initialization exceeded ${INIT_TIMEOUT}s, killing baseline run..." >&2
+          else
+            echo "WARNING: No round progress for ${ROUND_TIMEOUT}s (stuck at round ${last_round:-0}), killing baseline run..." >&2
+          fi
+          kill "$run_pid" 2>/dev/null || true
+          timed_out=1
+          break
+        fi
+      done
+      wait "$run_pid" 2>/dev/null || true
+      kill "$tail_pid" 2>/dev/null || true
+      wait "$tail_pid" 2>/dev/null || true
+      set -e
+
+      if [[ "$timed_out" -eq 1 ]]; then
+        partial_dir="$(grep -E "^Run folder: " "$tmp_log" | tail -n 1 | sed 's/^Run folder: //' || true)"
+        if [[ -n "$partial_dir" && -d "$partial_dir" ]]; then
+          rm -rf "$partial_dir"
+        fi
+        continue
+      fi
+      run_ok=1
+      break
+    done
+    if [[ "$run_ok" -ne 1 ]]; then
+      echo "ERROR: ${baseline_label} failed after $((MAX_RETRIES+1)) attempts, skipping." >&2
+      rm -f "$tmp_log"
+      continue
+    fi
+
+    run_dir="$(grep -E "^Run folder: " "$tmp_log" | tail -n 1 | sed 's/^Run folder: //')"
+    rm -f "$tmp_log"
+
+    if [[ -n "$run_dir" && -d "$run_dir" ]]; then
+      new_dir="$SWEEP_ROOT/${baseline_label}__$(basename "$run_dir")"
+      mv "$run_dir" "$new_dir"
+      echo "Moved baseline to $new_dir"
+      metrics_probe="$new_dir/metrics/evaluate_server__accuracy.csv"
+      if [[ ! -s "$metrics_probe" ]]; then
+        echo "Error: baseline run produced no metrics at $metrics_probe" >&2
+        echo "Aborting sweep early due to failed baseline: $baseline_label ($strategy_name)" >&2
+        exit 1
+      fi
+      echo "$(csv_escape "$baseline_label"),$(csv_escape "BASELINE_clean"),$(csv_escape "$rep"),$(csv_escape "$seed_value"),$(csv_escape "$(basename "$new_dir")"),$(csv_escape "0"),$(csv_escape "30"),$(csv_escape "1.0"),$(csv_escape "off"),$(csv_escape "none"),$(csv_escape "0.0"),$(csv_escape "single"),$(csv_escape "0"),$(csv_escape ""),$(csv_escape "")" >> "$settings_csv"
+      COMPLETED_KEYS_STR+="$completed_key"$'\n'
+    else
+      echo "Warning: could not resolve run folder for ${baseline_label}." >&2
+    fi
+  done
+
   start_emitting=1
   # Only apply --from-label for the first strategy; subsequent strategies
   # rely on the skip-completed logic and should start from the beginning.
@@ -365,6 +541,11 @@ for strategy_name in "${RUN_STRATEGIES[@]}"; do
       run_config+=" attack-malicious-fraction=0.24 attack-malicious-fraction-mode=\"fixed\""
     fi
 
+    if [[ "${strategy_name}" == "multikrum" ]]; then
+      run_config+=" num-malicious-nodes=25"
+      run_config+=" attack-malicious-fraction=0.25 attack-malicious-fraction-mode=\"fixed\""
+    fi
+
     if [[ "${strategy_name}" == "fedtrimmedavg" ]]; then
       # Trimmed mean cuts beta from each tail; keep f <= beta for within-bound runs.
       run_config+=" trimmed-beta=0.24"
@@ -385,8 +566,28 @@ for strategy_name in "${RUN_STRATEGIES[@]}"; do
       # causing cosine-similarity trust scores to collapse.
       run_config+=" fltrust-root-size=1860 fltrust-root-batch-size=32 fltrust-server-lr=0.1"
       run_config+=" max-train-examples=1860"
+      run_config+=" trust-aggregation-strength=${TRUST_STRENGTH} trust-min-weight=${TRUST_MIN_WEIGHT} trust-warmup-rounds=${TRUST_WARMUP}"
       run_config+=" attack-malicious-fraction=0.25 attack-malicious-fraction-mode=\"fixed\""
     fi
+
+    if [[ "${strategy_name}" == "foolsgold" ]]; then
+      run_config+=" trust-aggregation-strength=${TRUST_STRENGTH} trust-min-weight=${TRUST_MIN_WEIGHT} trust-warmup-rounds=${TRUST_WARMUP}"
+      run_config+=" attack-malicious-fraction=0.25 attack-malicious-fraction-mode=\"fixed\""
+    fi
+
+    if [[ "${strategy_name}" == "flram" ]]; then
+      run_config+=" trust-aggregation-strength=${TRUST_STRENGTH} trust-min-weight=${TRUST_MIN_WEIGHT} trust-warmup-rounds=${TRUST_WARMUP}"
+      run_config+=" flram-min-score=0.05"
+      run_config+=" attack-malicious-fraction=0.25 attack-malicious-fraction-mode=\"fixed\""
+    fi
+
+    if [[ "${strategy_name}" == "mab-rfl" ]]; then
+      run_config+=" trust-aggregation-strength=${TRUST_STRENGTH} trust-min-weight=${TRUST_MIN_WEIGHT} trust-warmup-rounds=${TRUST_WARMUP}"
+      run_config+=" mab-rfl-reputation-decay=0.8 mab-rfl-current-weight=0.5 mab-rfl-min-score=0.05"
+      run_config+=" attack-malicious-fraction=0.25 attack-malicious-fraction-mode=\"fixed\""
+    fi
+
+    run_config+=" fraction-evaluate=0.1 max-central-eval-examples=5000"
 
     for ((rep=1; rep<=REPEATS; rep++)); do
       seed_value="$(pick_seed "$rep")"

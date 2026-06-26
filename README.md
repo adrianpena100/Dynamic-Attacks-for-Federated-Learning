@@ -22,6 +22,29 @@ pip install -e .
 flwr run .
 ```
 
+## Launch the Dashboard
+
+The dashboard keeps the current `pyproject.toml` defaults and launches experiments
+through `./run.sh`, then streams live progress and exposes artifacts in the browser.
+
+Install the optional dashboard dependencies:
+
+```bash
+pip install -e ".[dashboard]"
+```
+
+Start the app:
+
+```bash
+dynamic-fl-dashboard
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8000
+```
+
 ## Save logs and metrics per run
 
 This script runs a training job and writes a folder under `logs/`.

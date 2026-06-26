@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dynamic FL Control Center</title>
+    <link rel="stylesheet" href="/static/app.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-top">
+          <div class="brand">
+            <div class="brand-mark">FL</div>
+            <div class="brand-copy">
+              <h1>Dynamic FL</h1>
+              <p>Experiment Control Center</p>
+            </div>
+          </div>
+        </div>
+        <nav class="nav">
+          <button class="nav-link active" data-target="setup-view">Setup</button>
+          <button class="nav-link" data-target="monitor-view">Live Monitor</button>
+          <button class="nav-link" data-target="results-view">Results</button>
+        </nav>
+        <section class="sidebar-section">
+          <h2>Run Status</h2>
+          <div id="status-summary" class="status-stack"></div>
+        </section>
+        <section class="sidebar-section">
+          <h2>Recent Runs</h2>
+          <div id="history-list" class="history-list"></div>
+        </section>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <button id="sidebar-toggle" class="icon-button sidebar-toggle" type="button" aria-label="Toggle sidebar">←</button>
+          <div>
+            <p class="eyebrow">Real backend, real logs, real artifacts</p>
+            <h2>Federated Learning Stress-Test Dashboard</h2>
+          </div>
+          <div class="topbar-actions">
+            <button id="reload-config" class="button ghost">Reload Defaults</button>
+            <button id="reset-form" class="button ghost">Reset Form</button>
+            <button id="launch-run" class="button primary">Launch Experiment</button>
+          </div>
+        </header>
+
+        <section id="setup-view" class="view active">
+          <div class="setup-grid">
+            <div id="config-groups" class="config-groups"></div>
+            <div class="side-panel">
+              <div class="card">
+                <div class="card-header">
+                  <div>
+                    <p class="eyebrow">Presets</p>
+                    <h3>Quick Start</h3>
+                  </div>
+                </div>
+                <div class="preset-grid">
+                  <button class="preset" data-preset="baseline">Clean Baseline</button>
+                  <button class="preset" data-preset="stress">Attack Stress</button>
+                  <button class="preset" data-preset="stealth">Stealth Ramp</button>
+                  <button class="preset" data-preset="backdoor">Backdoor Focus</button>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-header">
+                  <div>
+                    <p class="eyebrow">Resolved Config</p>
+                    <h3>TOML Preview</h3>
+                  </div>
+                </div>
+                <pre id="toml-preview" class="code-panel"></pre>
+              </div>
+
+              <div class="card">
+                <div class="card-header">
+                  <div>
+                    <p class="eyebrow">Notes</p>
+                    <h3>Config Guidance</h3>
+                  </div>
+                </div>
+                <ul id="config-notes" class="notes-list"></ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="monitor-view" class="view">
+          <div class="monitor-grid">
+            <div class="card hero-card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Live Execution</p>
+                  <h3>Round Progress</h3>
+                </div>
+              </div>
+              <div class="progress-head">
+                <div>
+                  <span class="metric-label">Current Round</span>
+                  <strong id="round-now">0</strong>
+                </div>
+                <div>
+                  <span class="metric-label">Total Rounds</span>
+                  <strong id="round-total">0</strong>
+                </div>
+                <div>
+                  <span class="metric-label">State</span>
+                  <strong id="run-state">idle</strong>
+                </div>
+              </div>
+              <div class="progress-bar"><div id="round-progress" class="progress-fill"></div></div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Server Metrics</p>
+                  <h3>Accuracy</h3>
+                </div>
+              </div>
+              <div id="server-accuracy-chart" class="chart-card"></div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Server Metrics</p>
+                  <h3>Loss</h3>
+                </div>
+              </div>
+              <div id="server-loss-chart" class="chart-card"></div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Server Metrics</p>
+                  <h3>Backdoor ASR</h3>
+                </div>
+              </div>
+              <div id="server-asr-chart" class="chart-card"></div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Client Training</p>
+                  <h3>Train Metrics</h3>
+                </div>
+              </div>
+              <div id="train-chart" class="chart-card"></div>
+            </div>
+
+            <div class="card explainers-card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Metric Guide</p>
+                  <h3>What You Are Looking At</h3>
+                </div>
+              </div>
+              <div class="explainer-grid">
+                <article class="explainer-item">
+                  <h4>Server Accuracy</h4>
+                  <p>This is the main task performance of the global model on evaluation data. If accuracy stays high under attack, the defense is likely absorbing the disruption. If it drops sharply, the server may be accepting harmful updates.</p>
+                </article>
+                <article class="explainer-item">
+                  <h4>Server Loss</h4>
+                  <p>Loss shows how confidently wrong or right the global model is. It can spike before accuracy collapses, so it is useful as an early instability signal even when the top-line accuracy still looks acceptable.</p>
+                </article>
+                <article class="explainer-item">
+                  <h4>Backdoor ASR</h4>
+                  <p>Attack Success Rate tracks whether poisoned behavior is actually being implanted. A high ASR means the model is being manipulated even if normal accuracy still looks strong, which is why this matters separately from accuracy.</p>
+                </article>
+                <article class="explainer-item">
+                  <h4>Client Train Loss</h4>
+                  <p>This aggregates how local client training is behaving during the round. Rising or unstable train loss can indicate optimization stress, drift between clients, or the effects of active poisoning pressure.</p>
+                </article>
+                <article class="explainer-item">
+                  <h4>Poisoned Examples</h4>
+                  <p>This shows how many training examples were actually poisoned in the participating clients. It helps connect the configured attack to what was injected in practice instead of only relying on outcome metrics.</p>
+                </article>
+                <article class="explainer-item">
+                  <h4>Why Train Loss and Poisoned Examples Share a View</h4>
+                  <p>They are paired so you can compare cause and effect. Poisoned examples reflect attack pressure, while train loss shows whether that pressure is visibly changing client-side optimization behavior in the same time window.</p>
+                </article>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Logged Attack Activity</p>
+                  <h3>Attack Feed</h3>
+                </div>
+              </div>
+              <div id="attack-feed" class="feed"></div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Defense Activity</p>
+                  <h3>Selection Feed</h3>
+                </div>
+              </div>
+              <div id="defense-feed" class="feed"></div>
+            </div>
+
+            <div class="card logs-card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Streaming Logs</p>
+                  <h3>Server Console</h3>
+                </div>
+              </div>
+              <pre id="log-console" class="log-console"></pre>
+            </div>
+          </div>
+        </section>
+
+        <section id="results-view" class="view">
+          <div class="results-grid">
+            <div class="card results-summary-card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Run Summary</p>
+                  <h3>Final Outcome</h3>
+                </div>
+              </div>
+              <div id="result-summary" class="summary-grid"></div>
+            </div>
+
+            <div class="card results-analysis-card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Reports</p>
+                  <h3>Analysis and Summaries</h3>
+                </div>
+              </div>
+              <div class="report-grid">
+                <div class="report-card">
+                  <p class="eyebrow">LLM Analysis</p>
+                  <h4>Vulnerability Interpretation</h4>
+                  <p id="llm-summary-preview" class="report-preview">No LLM summary loaded yet.</p>
+                  <button id="open-llm-report" class="button ghost" type="button">Open LLM Report</button>
+                </div>
+                <div class="report-card">
+                  <p class="eyebrow">Attack Summary</p>
+                  <h4>Attack Timeline and Clients</h4>
+                  <p id="attack-summary-preview" class="report-preview">No attack summary loaded yet.</p>
+                  <button id="open-attack-report" class="button ghost" type="button">Open Attack Summary</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="card results-files-card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Artifacts</p>
+                  <h3>Files and Plots</h3>
+                </div>
+              </div>
+              <div id="artifact-groups" class="artifact-groups"></div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+      <template id="field-template">
+        <label class="field">
+          <span class="field-label"></span>
+          <span class="field-control"></span>
+        </label>
+      </template>
+
+      <div id="modal-overlay" class="modal-overlay hidden" aria-hidden="true">
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+          <div class="modal-header">
+            <div>
+              <p class="eyebrow">Preview</p>
+              <h3 id="modal-title">Artifact</h3>
+            </div>
+            <button id="modal-close" class="icon-button" type="button" aria-label="Close preview">×</button>
+          </div>
+          <div id="modal-body" class="modal-body"></div>
+        </div>
+      </div>
+
+      <div id="report-overlay" class="report-overlay hidden" aria-hidden="true">
+        <div class="report-overlay-card" role="dialog" aria-modal="true" aria-labelledby="report-overlay-title">
+          <button id="report-overlay-close" class="icon-button report-overlay-close" type="button" aria-label="Close report progress">×</button>
+          <div class="report-spinner" aria-hidden="true"></div>
+          <p class="eyebrow">Post-Run Analysis</p>
+          <h3 id="report-overlay-title">Report In Progress</h3>
+          <p class="report-overlay-copy">The experiment run has finished training and the LLM vulnerability analysis is now being generated. Results will open automatically when the report is ready.</p>
+        </div>
+      </div>
+
+    <script src="/static/app.js" type="module"></script>
+  </body>
+</html>
