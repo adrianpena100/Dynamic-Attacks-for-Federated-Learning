@@ -3655,10 +3655,11 @@ def get_dataset_spec(dataset: str) -> DatasetSpec:
             central_eval_split="test",
         )
 
+    if ds in {"takala/financial_phrasebank", "zeroshot/twitter-financial-news-sentiment"}:
+        return DatasetSpec(dataset=ds, modality="text", label_key="label", num_classes=3)
+
     if ds in {
-        "takala/financial_phrasebank",
         "pauri32/fiqa-2018",
-        "zeroshot/twitter-financial-news-sentiment",
         "bigbio/pubmed_qa",
         "openlifescienceai/medmcqa",
         "bigbio/med_qa",
@@ -3900,7 +3901,7 @@ def _resolve_spec(
     if spec.modality == "text" and not spec.text_key:
         needs_infer = True
     if spec.modality == "audio" and not spec.audio_key:
-        needs_infer = True
+        pass
 
     if not needs_infer:
         return spec
@@ -3941,13 +3942,44 @@ class Net(nn.Module):
         x = F.relu(self.fc2(x))
         return self.fc3(x)
 
-def create_model(dataset: str) -> Net:
+SUPPORTED_VISION_MODELS = {"simple-cnn", "resnet18"}
+
+
+def _create_resnet18(input_channels: int, num_classes: int) -> nn.Module:
+    from torchvision.models import resnet18 as _resnet18_factory
+    model = _resnet18_factory(weights=None)
+    # Standard ResNet uses stride-2 7x7 conv + maxpool, which collapses small
+    # images (28x28, 32x32) to 1x1 too early. Replace with a 3x3 stride-1 conv
+    # and remove maxpool so the feature maps stay large enough.
+    model.conv1 = nn.Conv2d(
+        input_channels, 64, kernel_size=3, stride=1, padding=1, bias=False,
+    )
+    model.bn1 = nn.BatchNorm2d(64)
+    model.maxpool = nn.Identity()
+    if num_classes != 1000:
+        model.fc = nn.Linear(model.fc.in_features, num_classes)
+    return model
+
+
+def _create_vision_model(model_name: str, input_channels: int, num_classes: int) -> nn.Module:
+    name = str(model_name).strip().lower()
+    if name in {"simple-cnn", "simple_cnn", "cnn", "lenet", ""}:
+        return Net(input_channels=input_channels, num_classes=num_classes)
+    if name in {"resnet18", "resnet-18", "resnet_18"}:
+        return _create_resnet18(input_channels, num_classes)
+    raise ValueError(
+        f"Unknown model architecture: {name!r}. "
+        f"Supported: {sorted(SUPPORTED_VISION_MODELS)}"
+    )
+
+
+def create_model(dataset: str, model_name: str = "simple-cnn") -> nn.Module:
     spec = get_dataset_spec(dataset)
     if spec.modality not in {"vision", "auto"}:
         raise ValueError("create_model() is vision-only; use get_task().")
     input_channels = int(spec.input_channels or 3)
     num_classes = int(spec.num_classes or 10)
-    return Net(input_channels=input_channels, num_classes=num_classes)
+    return _create_vision_model(model_name, input_channels=input_channels, num_classes=num_classes)
 
 
 fds: Optional[FederatedDataset] = None  # Cache FederatedDataset
@@ -4017,6 +4049,7 @@ def load_data(
     hf_trust_remote_code: bool = False,
     partitioner: str = "iid",
     dirichlet_alpha: float = 0.5,
+    data_seed: int = 42,
     max_train_examples: int = 0,
     max_val_examples: int = 0,
 ) -> Tuple[DataLoader, DataLoader]:
@@ -4062,7 +4095,7 @@ def load_data(
                 num_partitions=num_partitions,
                 partition_by=spec.label_key,
                 alpha=dirichlet_alpha,
-                seed=42,
+                seed=int(data_seed),
             )
         else:
             raise ValueError(
@@ -4244,28 +4277,22 @@ def _stable_hash_32(text: str) -> int:
 def _normalize_classification_labels(values: Any, *, num_classes: int) -> List[int]:
     """Map label values into [0..num_classes-1] for CrossEntropyLoss.
 
-    This is intentionally conservative and only applies a few deterministic
-    conversions that do not depend on seeing the full dataset:
-    - Sentiment140-style binary labels {0, 4} -> {0, 1}
-    - Binary labels {-1, 1} -> {0, 1}
-    - Bool -> {0, 1}
-
-    For other cases, users should provide labels already in range or add an
-    explicit preprocessing step.
+    Uses a two-pass approach: if all values are already in range, return them
+    directly. Otherwise apply known mappings (e.g. Sentiment140 {0,2,4} -> {0,1,2}).
     """
 
     if num_classes <= 0:
         raise ValueError("num_classes must be a positive integer")
 
     if isinstance(values, torch.Tensor):
-        # Works for both scalar tensors and 1D label tensors.
         raw_values: List[Any] = list(values)
     elif isinstance(values, (list, tuple)):
         raw_values = list(values)
     else:
         raw_values = [values]
 
-    normalized: List[int] = []
+    raw_ints: List[int] = []
+    all_in_range = True
     for v in raw_values:
         if isinstance(v, torch.Tensor):
             if v.numel() != 1:
@@ -4280,12 +4307,16 @@ def _normalize_classification_labels(values: Any, *, num_classes: int) -> List[i
             except Exception as exc:
                 raise ValueError(f"Non-integer label value: {v!r}") from exc
 
-        if 0 <= vi < num_classes:
-            normalized.append(vi)
-            continue
+        raw_ints.append(vi)
+        if not (0 <= vi < num_classes):
+            all_in_range = False
 
+    if all_in_range:
+        return raw_ints
+
+    normalized: List[int] = []
+    for vi in raw_ints:
         if num_classes == 2:
-            # Common binary conventions.
             if vi in (0, 4):
                 normalized.append(0 if vi == 0 else 1)
                 continue
@@ -4294,10 +4325,13 @@ def _normalize_classification_labels(values: Any, *, num_classes: int) -> List[i
                 continue
 
         if num_classes == 3:
-            # Sentiment140-style labels {0,2,4} -> {0,1,2}
             if vi in (0, 2, 4):
                 normalized.append({0: 0, 2: 1, 4: 2}[vi])
                 continue
+
+        if 0 <= vi < num_classes:
+            normalized.append(vi)
+            continue
 
         raise ValueError(
             f"Label value {vi} is out of range for num_classes={num_classes}. "
@@ -4420,6 +4454,7 @@ def get_task_from_run_config(run_config: Dict[str, Any]) -> Tuple[DatasetSpec, C
     eval_split = str(run_config.get("dataset-eval-split", "test"))
     dataset_subset = str(run_config.get("dataset-subset", ""))
     trust_remote_code = bool(run_config.get("hf-trust-remote-code", False))
+    model_name = str(run_config.get("model", "simple-cnn")).strip().lower()
 
     overrides = {
         "image-key": str(run_config.get("image-key", "")) or None,
@@ -4441,10 +4476,12 @@ def get_task_from_run_config(run_config: Dict[str, Any]) -> Tuple[DatasetSpec, C
 
     if spec.modality == "vision":
         assert spec.input_channels is not None
-        return spec, lambda: Net(input_channels=spec.input_channels, num_classes=spec.num_classes)
+        _ch = spec.input_channels
+        _nc = spec.num_classes
+        _mn = model_name
+        return spec, lambda: _create_vision_model(_mn, input_channels=_ch, num_classes=_nc)
 
     if spec.modality == "text":
-        # Hash dim must match _apply_text_transforms_factory
         return spec, lambda: TextClassifier(input_dim=2 ** 15, num_classes=spec.num_classes)
 
     if spec.modality == "tabular":

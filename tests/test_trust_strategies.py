@@ -2,8 +2,11 @@ import os
 from pathlib import Path
 from types import SimpleNamespace
 
-import torch
-from flwr.app import ArrayRecord
+import pytest
+
+torch = pytest.importorskip("torch")
+flwr_app = pytest.importorskip("flwr.app")
+ArrayRecord = flwr_app.ArrayRecord
 
 os.environ.setdefault("MPLCONFIGDIR", "/tmp")
 

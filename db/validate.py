@@ -121,6 +121,59 @@ def validate_database():
     else:
         print(f"  [PASS] MAB-RFL has {layer_count} distinct attack layers (sample_k working)")
 
+    # Verify model_architecture and dataset_modality columns are populated
+    null_arch = conn.execute(
+        "SELECT COUNT(*) FROM runs WHERE model_architecture IS NULL"
+    ).fetchone()[0]
+    if null_arch > 0:
+        errors.append(f"{null_arch} runs have NULL model_architecture")
+    else:
+        print("  [PASS] All runs have model_architecture populated")
+
+    null_mod = conn.execute(
+        "SELECT COUNT(*) FROM runs WHERE dataset_modality IS NULL"
+    ).fetchone()[0]
+    if null_mod > 0:
+        errors.append(f"{null_mod} runs have NULL dataset_modality")
+    else:
+        print("  [PASS] All runs have dataset_modality populated")
+
+    distinct_arch = conn.execute(
+        "SELECT DISTINCT model_architecture FROM runs ORDER BY model_architecture"
+    ).fetchall()
+    print(f"  [INFO] Model architectures: {[a[0] for a in distinct_arch]}")
+
+    distinct_mod = conn.execute(
+        "SELECT DISTINCT dataset_modality FROM runs ORDER BY dataset_modality"
+    ).fetchall()
+    print(f"  [INFO] Dataset modalities: {[m[0] for m in distinct_mod]}")
+
+    # Verify ATLAS columns in agent_recommendations
+    null_atlas = conn.execute(
+        "SELECT COUNT(*) FROM agent_recommendations WHERE atlas_technique_id IS NULL"
+    ).fetchone()[0]
+    total_recs = conn.execute(
+        "SELECT COUNT(*) FROM agent_recommendations"
+    ).fetchone()[0]
+    if null_atlas > 0 and total_recs > 0:
+        errors.append(f"{null_atlas}/{total_recs} recommendations have NULL atlas_technique_id")
+    elif total_recs > 0:
+        print(f"  [PASS] All {total_recs} recommendations have atlas_technique_id populated")
+
+    null_novelty = conn.execute(
+        "SELECT COUNT(*) FROM agent_recommendations WHERE novelty_status IS NULL"
+    ).fetchone()[0]
+    if null_novelty > 0 and total_recs > 0:
+        errors.append(f"{null_novelty}/{total_recs} recommendations have NULL novelty_status")
+    elif total_recs > 0:
+        print(f"  [PASS] All {total_recs} recommendations have novelty_status populated")
+
+    distinct_novelty = conn.execute(
+        "SELECT DISTINCT novelty_status FROM agent_recommendations ORDER BY novelty_status"
+    ).fetchall()
+    if distinct_novelty:
+        print(f"  [INFO] Novelty statuses: {[n[0] for n in distinct_novelty]}")
+
     conn.close()
 
     print()

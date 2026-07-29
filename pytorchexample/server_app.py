@@ -1102,6 +1102,32 @@ def main(grid: Grid, context: Context) -> None:
     min_evaluate_nodes: int = int(context.run_config.get("min-evaluate-nodes", 2))
     min_available_nodes: int = int(context.run_config.get("min-available-nodes", 2))
 
+    # Auto-compute Byzantine defense parameters from attack config.
+    # This makes strategy selection plug-and-play: users only set
+    # `strategy` and `malicious_fraction`; the rest is derived.
+    _attack_cfg = attack_engine.attack_config
+    _total_clients = int(context.run_config.get("num-total-clients", 100))
+    _selected_per_round = max(1, round(fraction_train * _total_clients))
+
+    _toml_malicious = int(context.run_config.get("num-malicious-nodes", 0))
+    if _toml_malicious > 0:
+        num_malicious_nodes = _toml_malicious
+    elif _attack_cfg.enabled:
+        num_malicious_nodes = round(_attack_cfg.malicious_fraction * _selected_per_round)
+    else:
+        num_malicious_nodes = 0
+
+    _toml_select = int(context.run_config.get("num-nodes-to-select", 0))
+    if _toml_select > 0:
+        num_nodes_to_select = _toml_select
+    else:
+        num_nodes_to_select = max(1, _selected_per_round - num_malicious_nodes - 2)
+
+    print(f"[Strategy] auto-config: strategy={strategy_name}, "
+          f"total_clients={_total_clients}, selected_per_round={_selected_per_round}, "
+          f"num_malicious_nodes={num_malicious_nodes}, "
+          f"num_nodes_to_select={num_nodes_to_select}")
+
     # Load global model
     global_model = model_factory()
     arrays = ArrayRecord(global_model.state_dict())
@@ -1164,18 +1190,14 @@ def main(grid: Grid, context: Context) -> None:
         beta: float = float(context.run_config.get("trimmed-beta", 0.2))
         strategy = AttackFedTrimmedAvg(beta=beta, **common_kwargs)
     elif strategy_name in {"krum"}:
-        num_malicious_nodes: int = int(context.run_config.get("num-malicious-nodes", 0))
         strategy = AttackKrum(num_malicious_nodes=num_malicious_nodes, **common_kwargs)
     elif strategy_name in {"multikrum", "multi-krum"}:
-        num_malicious_nodes: int = int(context.run_config.get("num-malicious-nodes", 0))
-        num_nodes_to_select: int = int(context.run_config.get("num-nodes-to-select", 1))
         strategy = AttackMultiKrum(
             num_malicious_nodes=num_malicious_nodes,
             num_nodes_to_select=num_nodes_to_select,
             **common_kwargs,
         )
     elif strategy_name in {"bulyan"}:
-        num_malicious_nodes: int = int(context.run_config.get("num-malicious-nodes", 0))
         strategy = AttackBulyan(num_malicious_nodes=num_malicious_nodes, **common_kwargs)
     elif strategy_name in {"foolsgold", "fools-gold"}:
         trust_strength = float(context.run_config.get("trust-aggregation-strength", 0.15))

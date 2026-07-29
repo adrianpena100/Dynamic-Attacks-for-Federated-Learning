@@ -51,7 +51,7 @@ The main implementation lives in `pytorchexample/` (a Flower app) and `scripts/`
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| `task.py` | ~4821 | Largest file. Model definitions (LeNet CNN), dataset loading/partitioning, `AttackEngine` class (all attack types, adaptive MAB, layered/composite attacks, scheduling), data poisoning, backdoor injection, metric computation. |
+| `task.py` | ~4821 | Largest file. Model definitions (LeNet CNN, ResNet-18, TextClassifier), configurable model dispatch (`_create_vision_model`), dataset loading/partitioning (vision/text/tabular/audio), `AttackEngine` class (all attack types, adaptive MAB, layered/composite attacks, scheduling), data poisoning, backdoor injection, label normalization, metric computation. |
 | `server_app.py` | ~1361 | All aggregation strategy implementations: FedAvg, Bulyan, MultiKrum, FedTrimmedAvg, FedMedian, FLTrust, FoolsGold, FLRAM, MAB-RFL. Contains `AttackInjectedStrategyMixin`, trust/reputation scoring, defense selection logging, per-round CSV writing. |
 | `client_app.py` | ~333 | Flower client: training loop with attack injection, evaluation with F1/precision/recall metrics, client-side metric reporting. |
 | `__init__.py` | 1 | Package marker. |
@@ -250,18 +250,39 @@ Before running, always confirm:
 
 # Dataset and Model Decisions
 
-The current model is a LeNet-style CNN for vision datasets.
+## Vision Models (configurable via `model` key in pyproject.toml)
 
-Known mapping from audit:
+| Model | Config value | Parameters (FEMNIST) | Parameters (CIFAR-10) | Best for |
+|-------|-------------|---------------------|----------------------|----------|
+| LeNet-style CNN | `simple-cnn` (default) | 66K | 62K | Fast iteration, debugging, FEMNIST/MNIST |
+| ResNet-18 (small-image variant) | `resnet18` | 11.2M | 11.2M | Stronger baseline, CIFAR-10 |
+
+Override per run: `--run-config 'model="resnet18"'`
+
+Non-vision modalities (text, tabular) ignore this field and use their own models.
+
+## Text Models
+
+Text datasets use `TextClassifier` — a 2-layer MLP (32768 → 128 → num_classes).
+Input features are hash-based bag-of-words vectors (CRC32, dim=32768).
+Verified end-to-end with Sentiment140 (3 classes).
+
+## Vision Dataset Mapping
+
 - MNIST uses 1 channel, 10 classes
 - FEMNIST uses 1 channel, 62 classes
 - CIFAR-10 uses 3 channels, 10 classes
 - CIFAR-100 uses 3 channels, 100 classes if supported
 
+## Text Dataset Mapping
+
+- Sentiment140: 3 classes (neg/neutral/pos), labels {0,2,4} auto-normalized to {0,1,2}
+- financial_phrasebank, twitter-financial-news-sentiment: cataloged but not yet end-to-end validated
+
 Current recommendation:
 - FEMNIST and CIFAR-10 are reasonable for thesis robustness comparisons.
-- CIFAR-100 is technically possible only if supported, but the current small CNN is likely too weak and may make results noisy.
-- Do not add a larger CNN or ResNet unless explicitly requested.
+- CIFAR-100 is technically possible only if supported, but the small CNN is likely too weak and may make results noisy.
+- Sentiment140 is verified for text modality smoke tests.
 - For first pilot, prefer FEMNIST with Dirichlet alpha=0.5.
 - Later stress tests can use FEMNIST Dirichlet alpha=0.1.
 - Use IID as a control condition later so non-IID failure can be separated from attack failure.
@@ -768,9 +789,9 @@ Lower priority / do later:
 - splitting task.py
 - strategy registry refactor
 - dashboard persistence
-- text/audio model improvements
+- ~~text/audio model improvements~~ **Text pipeline DONE** — Sentiment140 verified end-to-end. Audio still scaffolded only.
 - CIFAR-100 experiments
-- ResNet or larger model additions
+- ~~ResNet or larger model additions~~ **DONE** — ResNet-18 added and configurable via `model` TOML key
 
 # Communication Style
 

@@ -38,6 +38,7 @@ def train(msg: Message, context: Context):
     batch_size = context.run_config["batch-size"]
     partitioner: str = str(context.run_config.get("partitioner", "iid"))
     dirichlet_alpha: float = float(context.run_config.get("dirichlet-alpha", 0.5))
+    data_seed: int = int(context.run_config.get("data-seed", 42) or 42)
 
     dataset_modality: str = str(context.run_config.get("dataset-modality", "auto"))
     train_split: str = str(context.run_config.get("dataset-train-split", "train"))
@@ -69,6 +70,7 @@ def train(msg: Message, context: Context):
         hf_trust_remote_code=hf_trust_remote_code,
         partitioner=partitioner,
         dirichlet_alpha=dirichlet_alpha,
+        data_seed=data_seed,
         max_train_examples=max_train_examples,
         max_val_examples=max_val_examples,
     )
@@ -252,6 +254,7 @@ def evaluate(msg: Message, context: Context):
     batch_size = context.run_config["batch-size"]
     partitioner: str = str(context.run_config.get("partitioner", "iid"))
     dirichlet_alpha: float = float(context.run_config.get("dirichlet-alpha", 0.5))
+    data_seed: int = int(context.run_config.get("data-seed", 42) or 42)
 
     dataset_modality: str = str(context.run_config.get("dataset-modality", "auto"))
     train_split: str = str(context.run_config.get("dataset-train-split", "train"))
@@ -283,6 +286,7 @@ def evaluate(msg: Message, context: Context):
         hf_trust_remote_code=hf_trust_remote_code,
         partitioner=partitioner,
         dirichlet_alpha=dirichlet_alpha,
+        data_seed=data_seed,
         max_train_examples=max_train_examples,
         max_val_examples=max_val_examples,
     )

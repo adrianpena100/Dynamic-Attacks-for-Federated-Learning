@@ -164,7 +164,8 @@ def query_malicious_not_downweighted():
         FROM trust_metrics tm
         JOIN runs r ON r.run_id = tm.run_id
         JOIN client_attack_events cae
-          ON cae.run_id = tm.run_id AND cae.round = tm.round AND cae.client_id = tm.client_id
+          ON cae.run_id = tm.run_id AND cae.round = tm.round
+             AND CAST(cae.src_node_id AS TEXT) = CAST(tm.client_id AS TEXT)
         WHERE cae.is_malicious = 1
           AND r.is_baseline = 0
           AND tm.trust_score > 0.5
@@ -203,7 +204,8 @@ def query_trust_separation():
         FROM trust_metrics tm
         JOIN runs r ON r.run_id = tm.run_id
         JOIN client_attack_events cae
-          ON cae.run_id = tm.run_id AND cae.round = tm.round AND cae.client_id = tm.client_id
+          ON cae.run_id = tm.run_id AND cae.round = tm.round
+             AND CAST(cae.src_node_id AS TEXT) = CAST(tm.client_id AS TEXT)
         WHERE r.is_baseline = 0
         GROUP BY r.strategy, cae.is_malicious
         ORDER BY r.strategy, cae.is_malicious

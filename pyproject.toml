@@ -79,6 +79,19 @@ clientapp = "pytorchexample.client_app:app"
 # I keep it empty here so a plain run still works.
 artifact-dir = ""
 
+# --------------------------------------------------------
+##                   MODEL ARCHITECTURE                 ##
+# --------------------------------------------------------
+# I choose the model architecture here. Override per run via --run-config 'model="resnet18"'.
+#
+# Supported vision models:
+#   - simple-cnn   (default, small LeNet-style CNN — fast, good for debugging and FEMNIST/MNIST)
+#   - resnet18     (torchvision ResNet-18, no pretrained weights — stronger baseline for CIFAR-10)
+#
+# The model is auto-configured for the dataset's input channels and num_classes.
+# Non-vision modalities (text, tabular) use their own models and ignore this field.
+model = "simple-cnn"
+
 
 # --------------------------------------------------------
 ##                     QUICK OVERRIDES                  ##
@@ -127,6 +140,20 @@ attack-layer-intensity-alie = -1.0
 attack-layer-intensity-mean-shift = -1.0
 attack-layer-intensity-label-flip = -1.0
 attack-layer-intensity-backdoor = -1.0
+attack-malicious-fraction-ramp-mode = ""
+attack-malicious-fraction-ramp-start-round = 0
+attack-malicious-fraction-ramp-end-round = 0
+attack-malicious-fraction-ramp-value-start = -1.0
+attack-malicious-fraction-ramp-value-end = -1.0
+attack-malicious-fraction-cap = -1.0
+attack-random-intensity-mode = ""
+attack-random-intensity-value = -1.0
+attack-random-intensity-min = -1.0
+attack-random-intensity-max = -1.0
+attack-random-relative-to-update-norm-prob = -1.0
+attack-stealth-mode = ""
+attack-stealth-norm-quantile = -1.0
+attack-stealth-norm-multiplier = -1.0
 trimmed-beta = 0.2
 
 # FLTrust-specific knobs (only used when strategy = "fltrust").
@@ -201,15 +228,20 @@ strategy = "multikrum"
 # --------------------------------------------------------
 ##           ROBUST AGGREGATION STRATEGY PARAMS          ##
 # --------------------------------------------------------
-# NOTE: `num-malicious-nodes` is the expected number of Byzantine clients among the *selected* clients.
-# Example: if I select 100 clients/round and I ramp up to 40% attackers, I set this to 40.
-# If I change per-round participation (e.g., select 20 clients/round), I adjust this too:
-#   - 20 selected with a 20% attacker cap => num-malicious-nodes = 4
-num-malicious-nodes = 25
+# Must match the federation's num-supernodes setting below.
+# Used to auto-compute num-malicious-nodes and num-nodes-to-select.
+num-total-clients = 100
 
-# For MultiKrum: I choose how many client updates to keep each round.
-# Constraint: must be <= num_selected_clients - num_malicious_nodes - 2.
-num-nodes-to-select = 73
+# Auto-computed from attack config when set to 0:
+#   baseline (no attack): num-malicious-nodes = 0
+#   attacked: num-malicious-nodes = round(malicious_fraction * selected_per_round)
+# Set a positive value to override (expert mode).
+num-malicious-nodes = 0
+
+# Auto-computed for MultiKrum when set to 0:
+#   num-nodes-to-select = selected_per_round - num-malicious-nodes - 2
+# Set a positive value to override (expert mode).
+num-nodes-to-select = 0
 
 
 # --------------------------------------------------------
@@ -245,6 +277,7 @@ label-key = ""
 num-classes = 0
 partitioner = "dirichlet"
 dirichlet-alpha = 0.1
+data-seed = 42
 
 
 # --------------------------------------------------------

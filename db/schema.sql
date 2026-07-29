@@ -77,6 +77,9 @@ CREATE TABLE IF NOT EXISTS runs (
     attack_window_end   INTEGER,        -- last round attacks are active
     ramp_end            REAL,           -- intensity ramp endpoint
     malicious_fraction  REAL,           -- configured fraction of malicious clients
+    -- Model / modality
+    model_architecture  TEXT,           -- "simple-cnn", "resnet18", etc.
+    dataset_modality    TEXT,           -- "vision", "text", "tabular", "audio"
     -- Run status
     status              TEXT DEFAULT 'completed',  -- "completed", "failed", "running"
     created_at          TEXT            -- ISO 8601 timestamp
@@ -229,7 +232,7 @@ CREATE TABLE IF NOT EXISTS client_attack_events (
     run_id                   TEXT NOT NULL REFERENCES runs(run_id),
     round                    INTEGER NOT NULL,
     client_id                INTEGER NOT NULL,  -- client_number (1-based)
-    src_node_id              INTEGER,            -- raw Flower node ID
+    src_node_id              TEXT,               -- raw Flower node ID (large uint64)
     is_malicious             INTEGER NOT NULL,   -- boolean
     attack_active            INTEGER,            -- boolean
     attack_name              TEXT,               -- "+"-joined composite
@@ -270,7 +273,7 @@ CREATE INDEX idx_client_attack_run_round ON client_attack_events(run_id, round);
 CREATE TABLE IF NOT EXISTS trust_metrics (
     run_id                TEXT NOT NULL REFERENCES runs(run_id),
     round                 INTEGER NOT NULL,
-    client_id             INTEGER NOT NULL,  -- raw client_id from trust CSV
+    client_id             TEXT NOT NULL,     -- raw client_id from trust CSV (large uint64 node ID)
     strategy              TEXT NOT NULL,      -- "fltrust", "foolsgold", "flram", "mab-rfl"
     trust_score           REAL,
     selected_for_aggregation INTEGER,         -- boolean
@@ -369,7 +372,10 @@ CREATE TABLE IF NOT EXISTS agent_recommendations (
     evidence_strength        REAL,           -- 0-1, how much data supports this
     priority_score           REAL,           -- 0-1, overall priority for next experiment
     suggested_next_config    TEXT,           -- JSON or human-readable config suggestion
-    rationale                TEXT            -- plain English explanation
+    rationale                TEXT,           -- plain English explanation
+    -- MITRE ATLAS mapping
+    atlas_technique_id       TEXT,           -- comma-separated ATLAS IDs, e.g. "AML.T0018.000,AML.T0031"
+    novelty_status           TEXT            -- "known_weakness", "reproduced", "candidate_new", "needs_testing"
 );
 
 CREATE INDEX idx_recommendations_priority ON agent_recommendations(priority_score DESC);

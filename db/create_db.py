@@ -115,7 +115,7 @@ def insert_runs(conn, sweep_id):
         label = f"BASELINE_clean" if is_bl else f"PILOT_ALL_ADAPTIVE_CHURN"
         conn.execute(
             """INSERT INTO runs VALUES
-               (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+               (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (rid, sweep_id, label,
              f"{strategy}__femnist__noniid__2026-05-22",
              f"logs/sweeps/pilot_vuln_dummy/{rid}",
@@ -126,6 +126,7 @@ def insert_runs(conn, sweep_id):
              0 if not is_bl else None, 30 if not is_bl else None,
              3.0 if not is_bl else None,
              0.3 if not is_bl else None,
+             "simple-cnn", "vision",
              "completed", "2026-05-22T10:00:00"),
         )
         run_ids.append((rid, strategy, is_bl))
@@ -581,22 +582,29 @@ def insert_agent_recommendations(conn, run_ids):
          "MAB-RFL reputation scores failed to separate malicious and benign clients under layered "
          "attacks with churn scheduling. Churn resets reputation history."),
     ]
+    atlas_info = {
+        "bulyan": ("AML.T0018.000,AML.T0031,AML.T0015", "known_weakness"),
+        "fltrust": ("AML.T0018.000,AML.T0031", "reproduced"),
+        "mab-rfl": ("AML.T0018.000,AML.T0015,AML.T0031", "candidate_new"),
+    }
     for strategy, attack, weakness, effectiveness, evidence, priority, config, rationale in recs:
         atk_run = None
         for rid, s, is_bl in run_ids:
             if s == strategy and not is_bl:
                 atk_run = rid
                 break
+        atlas_ids, novelty = atlas_info.get(strategy, ("", "needs_testing"))
         conn.execute(
             """INSERT INTO agent_recommendations VALUES
-               (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+               (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (f"rec_{_uid()}", "2026-05-22T12:00:00", atk_run,
              strategy, attack, "flwrlabs/femnist",
              "adaptive" if strategy != "mab-rfl" else "weighted_random",
              "churn" if strategy != "fltrust" else "sticky",
              "single" if strategy != "mab-rfl" else "sample_k",
              weakness, effectiveness, evidence, priority,
-             config, rationale),
+             config, rationale,
+             atlas_ids, novelty),
         )
 
 
