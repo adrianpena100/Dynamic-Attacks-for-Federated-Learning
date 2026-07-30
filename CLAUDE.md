@@ -755,13 +755,14 @@ Research-validity priority order:
 4. ~~Fix small reproducibility issues such as global seeding and Dirichlet seed.~~ **DONE** — DirichletPartitioner seed configurable via `data-seed`.
 5. ~~Run small pilot sweeps before full sweeps.~~ **DONE** — pilot v1 completed for all 8 strategies.
 6. ~~Analyze baseline vs attacked drops.~~ **DONE** — 622 baseline comparisons in DB, ATLAS analysis run (584 findings).
-7. **Add multiple seeds** — still single-seed (1337). Need 3+ seeds for statistical claims.
-8. ~~Build CSV ingestion script.~~ **DONE** — `db/ingest.py` ingested 600 runs.
-9. ~~Test database schema against real CSV outputs.~~ **DONE** — all CSV columns mapped.
-10. ~~Build agent analysis report generation.~~ **DONE** — `db/analyze.py` + `db/atlas_mapping.py`.
-11. **Run MNIST clean baselines** — 320 attacked runs have 0 baselines.
-12. **Run experiments with more rounds** (100-200) to improve clean accuracy (currently 30 rounds).
-13. **IID control experiments** — separate non-IID effects from attack effects.
+7. **Re-run FEMNIST baselines with fixed params** — old baselines used hardcoded `num-malicious-nodes=25`, causing Bulyan/MultiKrum/FedTrimmedAvg/FedMedian to filter honest clients. Auto-compute fix is in place; baselines need re-running.
+8. **Add multiple seeds** — still single-seed (1337). Need 3+ seeds for statistical claims.
+9. ~~Build CSV ingestion script.~~ **DONE** — `db/ingest.py` ingested 600 runs.
+10. ~~Test database schema against real CSV outputs.~~ **DONE** — all CSV columns mapped.
+11. ~~Build agent analysis report generation.~~ **DONE** — `db/analyze.py` + `db/atlas_mapping.py`.
+12. **Run MNIST clean baselines** — 320 attacked runs have 0 baselines.
+13. **Run experiments with more rounds** (100-200) to improve clean accuracy (currently 30 rounds).
+14. **IID control experiments** — separate non-IID effects from attack effects.
 
 Database/workflow priority:
 1. ~~Build ingestion script~~ **DONE**
