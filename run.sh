@@ -36,9 +36,14 @@ if [[ ! -d "$RUN_OUTPUT_DIR" ]]; then
 fi
 
 if [[ -d "$RUN_OUTPUT_DIR" ]]; then
-  # Run LLM analysis for this run directory using the script's current CLI.
-  "$PYTHON_BIN" "$ROOT_DIR/scripts/llm_sweep_analysis.py" --sweeps-root "$RUN_OUTPUT_DIR" --call-api
-  echo "LLM analysis written inside: $RUN_OUTPUT_DIR"
+  # Post-run analysis (local, no API call, always runs)
+  "$PYTHON_BIN" "$ROOT_DIR/scripts/post_run_analysis.py" "$RUN_OUTPUT_DIR"
+
+  # LLM analysis (optional — set CALL_LLM_ANALYSIS=0 to skip)
+  if [[ "${CALL_LLM_ANALYSIS:-1}" == "1" ]]; then
+    "$PYTHON_BIN" "$ROOT_DIR/scripts/llm_sweep_analysis.py" --sweeps-root "$RUN_OUTPUT_DIR" --call-api
+    echo "LLM analysis written inside: $RUN_OUTPUT_DIR"
+  fi
 else
-  echo "Warning: Could not determine run output directory for LLM analysis." >&2
+  echo "Warning: Could not determine run output directory for analysis." >&2
 fi

@@ -1,0 +1,353 @@
+PROJECT SUMMARY
+===============
+Dynamic Federated Learning Vulnerability Discovery Framework
+Adrian Pena — Thesis, Summer 2026
+
+
+WHAT THIS PROJECT IS
+--------------------
+
+This is a research framework that systematically tests whether federated
+learning defense strategies can be broken by intelligent, adaptive attackers.
+
+Federated learning is a way to train machine learning models across many
+devices (called clients) without sharing raw data. Each client trains locally
+and sends model updates to a central server, which combines them. The problem
+is that some clients can be malicious — they can send poisoned updates to
+corrupt the global model.
+
+To deal with this, researchers have created "robust aggregation" defenses.
+These are algorithms the server uses to filter or downweight suspicious
+updates. Examples include Bulyan, MultiKrum, FedMedian, and FLTrust.
+
+Most papers test their defense against one or two specific attacks and call
+it robust. My thesis asks: what happens when the attacker is smart? What if
+the attacker can try multiple attack types, adapt in real time, layer attacks
+together, and vary when and how it strikes?
+
+The framework I built does exactly that. It runs hundreds of experiments
+across different combinations of:
+
+  - 8 defense strategies (the things being tested)
+  - 6 attack types (gaussian noise, sign flip, ALIE, mean shift, label flip, backdoor)
+  - 4 scheduling modes (which clients are malicious and when they rotate)
+  - 3 layering modes (single attack, fixed combo, or random combo per round)
+  - Delayed onset (attacks can start at round 0, 5, or 10)
+  - Intensity ramping (attacks can gradually get stronger)
+  - Adaptive selection (a multi-armed bandit algorithm picks the best attack
+    each round based on how much damage it caused)
+
+The results are logged, stored in a database, and analyzed using MITRE ATLAS
+threat categories — a standardized framework for classifying adversarial AI
+threats that the security community uses.
+
+
+THE 8 DEFENSE STRATEGIES I TEST
+-------------------------------
+
+Four "classical" Byzantine-robust defenses:
+  1. Bulyan — filters outlier updates, then trims remaining ones coordinate-wise
+  2. MultiKrum — scores each update by distance to others, picks the closest cluster
+  3. FedTrimmedAvg — trims the highest and lowest values per coordinate, averages the rest
+  4. FedMedian — takes the coordinate-wise median of all updates
+
+Four "trust/reputation-based" defenses (I implemented these):
+  5. FLTrust — server has a small trusted dataset, compares client updates to its own
+  6. FoolsGold — detects Sybil attacks by tracking how similar each client's updates are over time
+  7. FLRAM — scores client reliability using multiple signals (norm, direction, sign agreement)
+  8. MAB-RFL — uses a bandit-style reputation system to adaptively trust/distrust clients
+
+
+THE 6 ATTACK TYPES
+------------------
+
+  1. Gaussian Noise — adds random noise to model updates
+  2. Sign Flip — reverses the direction of the update and scales it up
+  3. ALIE ("A Little Is Enough") — crafts updates that are just barely outside
+     the honest distribution, designed to evade distance-based defenses
+  4. Mean Shift — pushes the update far from the true mean
+  5. Label Flip — corrupts training labels so the client learns wrong associations
+  6. Backdoor — injects a hidden pattern (trigger) that causes targeted misclassification
+
+
+HOW THE ADAPTIVE ATTACK WORKS
+------------------------------
+
+The adaptive attack engine uses an epsilon-greedy multi-armed bandit (MAB).
+Each round, it either explores (tries a random attack) or exploits (uses the
+attack that has caused the most damage so far). Over time, it converges on the
+most effective attack for each specific defense.
+
+This is the core thesis contribution: instead of manually guessing which
+attack beats which defense, the framework automatically discovers it.
+
+Early results show the bandit converges to different dominant attacks depending
+on the defense — suggesting each defense has a distinct weakness profile.
+
+
+WHAT I BUILT THIS SUMMER (TIMELINE)
+------------------------------------
+
+Late April 2026 — Starting point:
+  - Had the basic Flower federated learning app working
+  - 4 original defenses (Bulyan, MultiKrum, FedTrimmedAvg, FedMedian)
+  - Attack engine with 6 attack types and adaptive selection
+  - Ran initial FEMNIST sweep: 252 runs (63 attack configs x 4 defenses)
+  - Ran initial MNIST sweep: 320 runs (attacked only, no baselines)
+
+June 25 — Major expansion:
+  - Implemented 4 new trust-based defenses (FLTrust, FoolsGold, FLRAM, MAB-RFL)
+  - Built unified trust logging system (per-client trust scores every round)
+  - Added configurable trust strength (weak/medium/full) for fair comparison
+  - Total: 8 testable defense strategies with full attack injection support
+
+June 25 — Model architecture:
+  - Added ResNet-18 as an alternative to the simple LeNet-style CNN
+  - Made model selection configurable via pyproject.toml
+  - Both models auto-adapt to any dataset's input channels and class count
+
+June 26 — Text modality:
+  - Added text classification pipeline (hash-based bag-of-words + MLP)
+  - Verified end-to-end with Sentiment140 dataset (3 classes)
+  - Framework now supports vision, text, and tabular data
+
+July 1 — Database ingestion:
+  - Built SQLite database with 13-table schema
+  - Created ingestion script to load experiment CSVs into the database
+  - Ingested 600 runs total (252 FEMNIST + 320 MNIST + 22 pilot + 6 dummy)
+  - Database has 117,420 round metric rows, 17,580 attack events,
+    1.7 million client-level attack records
+
+July 14 — ATLAS vulnerability analysis:
+  - Built automated analysis engine that queries the database for
+    vulnerability patterns
+  - Created MITRE ATLAS technique mapping (9 techniques initially)
+  - Generated vulnerability report: 584 findings from 600 runs
+  - Identified 11 candidate novel findings needing replication
+
+July 26 — Framework plumbing audit:
+  - Audited all 90 TOML config keys to verify they're wired into code
+  - Built 52-test verification suite (test_framework_plumbing.py)
+  - Fixed 2 bugs found during audit
+  - Confirmed all 8 strategies, all 6 attacks, all scheduling/layering
+    modes work correctly
+  - Ran pilot sweeps for all 8 strategies (baseline + attacked)
+
+July 29 — Test hardening + plug-and-play params:
+  - Brought test suite to 102 tests, 100% pass rate, 0 skips
+  - Diagnosed root cause of collapsed clean baselines (Bulyan showing 2-3%
+    accuracy instead of 50-60% in clean runs)
+  - Root cause: hardcoded num-malicious-nodes=25 was filtering honest
+    clients even when no attackers existed
+  - Fixed by auto-computing Byzantine parameters from attack config
+  - Made strategy switching completely plug-and-play (change one config line)
+  - Expanded ATLAS registry to 11 techniques across 4 tactics
+  - Found 4 new supporting papers (FedStrategist 2025, ScaleSign 2025,
+    BadSampler KDD 2024, Celtibero 2024)
+
+
+WHAT THE CODEBASE LOOKS LIKE NOW
+---------------------------------
+
+Total: ~16,600 lines of Python across 20+ files
+
+Core application (Flower federated learning app):
+  - task.py (~4,858 lines) — models, datasets, attack engine, data poisoning
+  - server_app.py (~1,383 lines) — all 8 defense strategy implementations
+  - client_app.py (~337 lines) — client training loop with attack injection
+
+Orchestration and analysis:
+  - run_simulation_and_log.py (~3,124 lines) — runs experiments, produces CSVs
+  - run_thesis_sweep.sh — iterates strategies x scenarios x seeds
+  - llm_sweep_analysis.py — LLM-based vulnerability analysis
+  - vulnerability_analysis.py — cross-defense analysis
+
+Database layer:
+  - schema.sql — 13-table SQLite schema
+  - ingest.py — loads CSV experiment outputs into database
+  - analyze.py — automated vulnerability analysis engine
+  - atlas_mapping.py — MITRE ATLAS technique registry and finding classifier
+  - queries.py — 11 vulnerability discovery query functions
+
+Testing:
+  - test_smoke.py (37 tests) — config parsing, strategy names, model creation
+  - test_framework_plumbing.py (52 tests) — dataset specs, model factories,
+    attack config, strategy dispatch
+  - test_trust_strategies.py (13 tests) — trust-weighted aggregation logic
+
+Web dashboard:
+  - app.py — HTTP server for experiment monitoring
+  - Frontend (HTML/JS/CSS) for viewing run status and metrics
+
+Documentation:
+  - 7 progress updates in docs/updates/
+  - ATLAS vulnerability report (584 findings)
+  - Database workflow documentation
+  - IEEE conference paper draft (LaTeX)
+
+
+KEY RESULTS SO FAR
+------------------
+
+These are preliminary — single seed, needs replication:
+
+1. Every defense collapses under the right attack combination.
+   Bulyan: 55.8% clean -> 0.5% under layered attacks (label_flip+backdoor+mean_shift)
+   MultiKrum: 56.7% clean -> 2.9% under layered attacks
+   All 7 non-FLTrust defenses showed collapse to <5% accuracy under some config.
+
+2. FLTrust is the most resilient defense tested.
+   Clean accuracy: 50-57% (consistent across runs)
+   Under attack: still maintains meaningful accuracy in most configurations
+   But literature (BadSampler, KDD 2024) shows it can be defeated by
+   clean-label attacks, which we haven't tested yet.
+
+3. The adaptive attacker converges to different dominant attacks per defense.
+   MultiKrum: ALIE dominates (18-20 out of 30 rounds)
+   Bulyan (sticky clients): mean_shift dominates (20/30 rounds)
+   FedTrimmedAvg (sticky): gaussian_noise dominates (20/30 rounds)
+   This suggests each defense has a distinct exploitable weakness profile.
+
+4. Layered attacks (combining 3 attack types per round) cause more damage
+   than any single attack alone across all defenses.
+
+5. Immediate onset (round 0) attacks are more damaging than delayed attacks
+   (starting at round 5 or 10), since the model never builds a clean baseline.
+
+
+WHAT I PLAN TO DO NEXT
+----------------------
+
+High priority — needed for valid thesis claims:
+
+  1. Re-run FEMNIST baselines with fixed parameters
+     The old baselines for Bulyan/MultiKrum/FedTrimmedAvg/FedMedian are invalid
+     because of the hardcoded num-malicious-nodes bug. The fix is in place;
+     baselines need to be re-run to get correct clean accuracy numbers.
+
+  2. Run MNIST clean baselines
+     There are 320 attacked MNIST runs but zero clean baselines. Cannot make
+     any statistical claims about MNIST until matching baselines exist.
+
+  3. Multi-seed replication
+     Everything so far is single-seed (seed 1337). Need at least 3 seeds per
+     key configuration to report means, standard deviations, and confidence
+     intervals. Without this, results are anecdotal, not statistical.
+
+  4. More training rounds
+     Current experiments use 30 rounds. FEMNIST has 62 classes and published
+     FL results typically need 100-200 rounds for full convergence. Running
+     more rounds would improve clean baseline accuracy (expected 70-80%
+     instead of 50-60%) and give attacks more time to show their effect.
+
+Medium priority — strengthens the thesis:
+
+  5. IID control experiments
+     Run the same attack configs with IID data partitioning (instead of
+     non-IID Dirichlet). This separates "the defense struggles because data
+     is heterogeneous" from "the defense struggles because of the attack."
+
+  6. FLTrust stress testing
+     FLTrust is the strongest defense so far. Test it under higher malicious
+     fractions (>30%), clean-label attacks, and more aggressive configurations
+     to find its breaking point.
+
+  7. Replicate candidate novel findings
+     The 11 candidate novel findings from the ATLAS analysis need 3+ seeds
+     each. Specific findings to confirm:
+       - flram/foolsgold/mab-rfl trust score manipulation
+       - Defense-specific dominant attack profiles
+       - Layered attack universal collapse
+
+  8. Cross-dataset analysis
+     Compare FEMNIST vs MNIST results to see if vulnerability patterns are
+     dataset-dependent or universal across tasks.
+
+Lower priority — nice to have:
+
+  9. Add MAB bandit state logging
+     The adaptive_attack_scores table in the database is a placeholder.
+     Need to log the actual bandit weights/scores each round so we can
+     visualize how the attacker learns over time.
+
+  10. CIFAR-10 experiments
+      Run the same framework on CIFAR-10 (3-channel, 10 classes) to show
+      generalization beyond grayscale handwriting datasets.
+
+  11. Write the thesis
+      IEEE conference paper draft exists. Need to expand into full thesis
+      format with proper related work, methodology, results, and discussion.
+
+
+HOW TO RUN THE FRAMEWORK
+-------------------------
+
+Quick single run (for testing):
+  ./run.sh
+
+Full sweep (all strategies x all scenarios):
+  ./run_thesis_sweep.sh \
+    --name my_sweep \
+    --dataset "flwrlabs/femnist" \
+    --dirichlet-alpha 0.5 \
+    --sweeps-file docs/vulnerability_pilot_once.conf \
+    --strategies "bulyan,multikrum,fedtrimmedavg,fedmedian,fltrust,foolsgold,flram,mab-rfl" \
+    --repeats 1 \
+    --seeds "1337" \
+    --trust-level full
+
+Run tests:
+  ../myenv/bin/python -m pytest tests/ -v
+
+All results go to logs/sweeps/<sweep_name>/
+
+
+MITRE ATLAS MAPPING
+-------------------
+
+The framework maps to 11 MITRE ATLAS techniques across 4 tactics:
+
+ML Attack Staging (7 techniques):
+  - AML.T0018: Backdoor ML Model (backdoor attack injection)
+  - AML.T0018.000: Poison Training Data (label flip, data poisoning)
+  - AML.T0020: Poison Training Data (gradient/update manipulation)
+  - AML.T0031: Erode ML Model Integrity (accuracy degradation over rounds)
+  - AML.T0042: Verify Attack (MAB measures attack effectiveness)
+  - AML.T0043: Craft Adversarial Data (all 6 attack types)
+  - AML.T0043.004: Insert Backdoor Trigger (backdoor-specific)
+
+ML Evasion (1 technique):
+  - AML.T0015: Evade ML Model (stealth mode, norm capping)
+
+Reconnaissance / Discovery (1 technique):
+  - AML.T0007: Discover ML Artifacts (adaptive attacker observes model behavior)
+
+AI Model Access (2 techniques):
+  - AML.T0040: AI Model Inference API Access (clients evaluate global model)
+  - AML.T0044: Full AI Model Access (FL clients receive full model each round)
+
+
+THESIS FRAMING
+--------------
+
+The thesis is framed as: "Can an adaptive, multi-axis attacker automatically
+discover defense-specific vulnerabilities in federated learning robust
+aggregation methods?"
+
+The answer so far (preliminary): Yes. The adaptive attack engine converges to
+different dominant attacks per defense, suggesting each has a distinct weakness
+profile. Layered attacks cause universal collapse across all tested defenses.
+FLTrust shows the most resilience but is not invulnerable.
+
+This uses conservative language because results are single-seed and need
+replication. We say "candidate vulnerability" and "observed weakness," not
+"confirmed novel vulnerability."
+
+The novelty claim (if replicated) is the combination of:
+  - Attack-side MAB for automated vulnerability discovery (vs defense-side MAB
+    in prior work like MAB-RFL and FedStrategist)
+  - Multi-axis attack staging (type x scheduling x layering x timing x intensity)
+  - Testing across 8 defenses simultaneously (most papers test 1-3)
+  - MITRE ATLAS threat mapping for federated learning attacks
+
+No prior work combines all four of these elements in one framework.

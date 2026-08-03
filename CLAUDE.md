@@ -61,6 +61,7 @@ The main implementation lives in `pytorchexample/` (a Flower app) and `scripts/`
 | File | Lines | Purpose |
 |------|-------|---------|
 | `run_simulation_and_log.py` | ~3124 | Main simulation runner. Wraps `flwr run`, produces per-run output directories with metrics CSVs, summaries, graphs, configs, and meta.json. This is the script that `run_thesis_sweep.sh` calls for each run. |
+| `post_run_analysis.py` | ~470 | Post-run terminal analysis. Detects 8 vulnerability patterns, generates defense-specific suggestions with parameter changes, saves structured JSON. Runs automatically via `run.sh`. |
 | `llm_sweep_analysis.py` | ~575 | LLM-based (Claude API) vulnerability analysis over sweep artifacts. Generates per-strategy and global analysis markdown reports. |
 | `generate_sweep_summary.py` | ~570 | Generates compact sweep summary tables from per-run metrics. |
 | `vulnerability_analysis.py` | ~530 | Cross-defense, cross-dataset vulnerability analysis. Extracts final accuracy and pivots by attack dimensions. |
@@ -75,7 +76,7 @@ The main implementation lives in `pytorchexample/` (a Flower app) and `scripts/`
 | File | Purpose |
 |------|---------|
 | `run_thesis_sweep.sh` | Main sweep runner. Parses sweep config files, iterates strategies × scenarios × seeds, calls `run_simulation_and_log.py` for each. |
-| `run.sh` | Quick single-run launcher for development/debugging. |
+| `run.sh` | Quick single-run launcher. Runs simulation, then post-run analysis (always), then LLM analysis (opt-out via `CALL_LLM_ANALYSIS=0`). |
 
 ## Dashboard — Web UI
 
@@ -387,6 +388,7 @@ Progress updates (in `docs/updates/`):
 | `2026-07-14_atlas_analysis.md` | Jul 14 | MITRE ATLAS analysis pipeline + vulnerability report |
 | `2026-07-26_plumbing_audit.md` | Jul 26 | Framework plumbing audit, 52-test suite, data ingestion (600 runs), ATLAS findings (584), research citations |
 | `2026-07-29.md` | Jul 29 | Test hardening (102/102 pass), baseline validation, ATLAS expansion (11 techniques), plug-and-play strategy params, new literature |
+| `2026-08-03.md` | Aug 3 | Post-run terminal analysis with defense-specific suggestions, run.sh integration, verified against 3 real runs |
 
 Database files:
 
@@ -779,6 +781,8 @@ Lower priority / do later:
 - CIFAR-100 experiments
 - ~~ResNet or larger model additions~~ **DONE**
 - ~~Plug-and-play strategy params~~ **DONE** — auto-compute num-malicious-nodes and num-nodes-to-select
+- ~~Post-run terminal analysis~~ **DONE** — `scripts/post_run_analysis.py` detects 8 patterns, generates defense-specific suggestions, wired into `run.sh`
+- **Test the suggestion loop end-to-end** — pick one defense, apply suggested param changes, re-run, verify improvement
 
 # Communication Style
 
