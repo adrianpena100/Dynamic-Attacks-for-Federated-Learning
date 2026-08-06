@@ -61,13 +61,15 @@ The main implementation lives in `pytorchexample/` (a Flower app) and `scripts/`
 | File | Lines | Purpose |
 |------|-------|---------|
 | `run_simulation_and_log.py` | ~3124 | Main simulation runner. Wraps `flwr run`, produces per-run output directories with metrics CSVs, summaries, graphs, configs, and meta.json. This is the script that `run_thesis_sweep.sh` calls for each run. |
-| `post_run_analysis.py` | ~470 | Post-run terminal analysis. Detects 8 vulnerability patterns, generates defense-specific suggestions with parameter changes, saves structured JSON. Runs automatically via `run.sh`. |
+| `post_run_analysis.py` | ~947 | Post-run terminal analysis. Detects 8 vulnerability patterns, generates defense-specific suggestions with parameter changes, saves structured JSON. Runs automatically via `run.sh`. |
 | `llm_sweep_analysis.py` | ~575 | LLM-based (Claude API) vulnerability analysis over sweep artifacts. Generates per-strategy and global analysis markdown reports. |
 | `generate_sweep_summary.py` | ~570 | Generates compact sweep summary tables from per-run metrics. |
 | `vulnerability_analysis.py` | ~530 | Cross-defense, cross-dataset vulnerability analysis. Extracts final accuracy and pivots by attack dimensions. |
 | `primitive_attack_rank.py` | ~130 | Ranks primitive attacks by effectiveness across strategies. |
 | `adaptive_takeover_summary.py` | ~60 | Summarizes adaptive attack takeover patterns (which attack the MAB converges to). |
 | `prefetch_datasets.py` | ~95 | Downloads HF datasets to local cache for offline use. |
+| `generate_run_report.py` | ~889 | Auto-generates a Jupyter notebook report per run. Reads CSVs/JSONs and builds `report.ipynb` with accuracy/loss/F1 charts, attack analysis, defense behavior, per-class heatmap, findings/suggestions. Runs automatically via `run.sh`. |
+| `query_run.py` | ~194 | CLI to query the SQLite database for a specific run's results. Prints run info, final metrics, baseline comparison, attack summary, trust summary. |
 | `measure_srv_norm.py` | ~10 | Quick utility to measure server model parameter norm. |
 | `__init__.py` | 2 | Package marker. |
 
@@ -76,7 +78,7 @@ The main implementation lives in `pytorchexample/` (a Flower app) and `scripts/`
 | File | Purpose |
 |------|---------|
 | `run_thesis_sweep.sh` | Main sweep runner. Parses sweep config files, iterates strategies × scenarios × seeds, calls `run_simulation_and_log.py` for each. |
-| `run.sh` | Quick single-run launcher. Runs simulation, then post-run analysis (always), then LLM analysis (opt-out via `CALL_LLM_ANALYSIS=0`). |
+| `run.sh` | Quick single-run launcher. Runs simulation, then post-run analysis, then notebook report generation, then LLM analysis (opt-out via `CALL_LLM_ANALYSIS=0`). |
 
 ## Dashboard — Web UI
 

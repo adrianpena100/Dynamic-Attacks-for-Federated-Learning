@@ -39,6 +39,9 @@ if [[ -d "$RUN_OUTPUT_DIR" ]]; then
   # Post-run analysis (local, no API call, always runs)
   "$PYTHON_BIN" "$ROOT_DIR/scripts/post_run_analysis.py" "$RUN_OUTPUT_DIR"
 
+  # Generate notebook report (always runs)
+  "$PYTHON_BIN" "$ROOT_DIR/scripts/generate_run_report.py" "$RUN_OUTPUT_DIR"
+
   # LLM analysis (optional — set CALL_LLM_ANALYSIS=0 to skip)
   if [[ "${CALL_LLM_ANALYSIS:-1}" == "1" ]]; then
     "$PYTHON_BIN" "$ROOT_DIR/scripts/llm_sweep_analysis.py" --sweeps-root "$RUN_OUTPUT_DIR" --call-api
