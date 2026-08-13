@@ -25,9 +25,12 @@ try:
     from db.atlas_mapping import (
         ATLAS_TECHNIQUES,
         FINDING_PATTERNS,
+        build_finding_context,
         classify_finding,
         classify_novelty,
         get_attack_techniques,
+        is_novel_dimension,
+        lookup_known_vulnerability,
     )
     _HAS_ATLAS = True
 except ImportError:
@@ -260,7 +263,8 @@ def analyze_defense_behavior(data: Dict) -> Dict:
 # ── Finding detection ────────────────────────────────────────────────────────
 
 def detect_findings(
-    acc: Dict, attack: Dict, defense: Dict, asr_series: List[Tuple[int, float]]
+    acc: Dict, attack: Dict, defense: Dict, asr_series: List[Tuple[int, float]],
+    run_config: Optional[Dict] = None,
 ) -> List[Dict]:
     findings = []
     strategy = defense.get("strategy", "unknown")
@@ -389,6 +393,35 @@ def detect_findings(
             f["atlas_techniques"] = classification["atlas_techniques"]
             f["novelty_status"] = classification["novelty_status"]
             f["literature_refs"] = classification["literature_refs"]
+            f["kb_matches"] = classification.get("kb_matches", [])
+            f["rationale"] = classification.get("rationale", "")
+
+        # Build rich context from KB + XLSX survey
+        for f in findings:
+            try:
+                ctx = build_finding_context(
+                    attack=dominant,
+                    defense=strategy,
+                    pattern=f["pattern"],
+                    accuracy_drop=f.get("evidence", {}).get("drop"),
+                    slipthrough_rate=f.get("evidence", {}).get("slipthrough_rate"),
+                    trust_score=f.get("evidence", {}).get("avg_mal_trust"),
+                )
+                f["context"] = ctx
+            except Exception:
+                f["context"] = None
+
+        # Check novel dimensions at run level
+        rc = run_config or {}
+        novel_dims = is_novel_dimension(
+            attack_mode=rc.get("attack-mode"),
+            selection_mode=rc.get("malicious-selection-mode"),
+            layering_mode=rc.get("layering-mode"),
+            onset_round=rc.get("attack-onset-round", 0),
+            intensity_ramp=rc.get("intensity-ramp", 1.0),
+        )
+        for f in findings:
+            f["kb_novel_dimensions"] = [d["dimension"] for d in novel_dims]
 
     return findings
 
@@ -820,10 +853,24 @@ def format_terminal_output(
     lines.append("-" * 40)
     if not findings:
         lines.append("  No vulnerability findings detected.")
+    known_count = 0
+    novel_count = 0
     for i, f in enumerate(findings, 1):
         severity = f.get("severity", "medium").upper()
+        novelty = f.get("novelty_status", "")
+        if novelty in ("known_weakness", "reproduced"):
+            tag = "KNOWN"
+            known_count += 1
+        elif novelty == "known_robust":
+            tag = "ROBUST"
+            known_count += 1
+        elif novelty == "candidate_new":
+            tag = "NOVEL"
+            novel_count += 1
+        else:
+            tag = novelty.upper() if novelty else "?"
         lines.append(
-            f"  [{i}] {f['pattern'].upper().replace('_', ' ')}  "
+            f"  [{i}] [{tag}] {f['pattern'].upper().replace('_', ' ')}  "
             f"(severity: {severity})"
         )
         lines.append(f"      {f['description']}")
@@ -832,8 +879,106 @@ def format_terminal_output(
                 f"{t['id']} ({t['name']})" for t in f["atlas_techniques"][:3]
             )
             lines.append(f"      ATLAS: {atlas_str}")
-        if f.get("novelty_status"):
-            lines.append(f"      Novelty: {f['novelty_status']}")
+
+        # Rich context from KB + XLSX survey
+        ctx = f.get("context")
+        if ctx:
+            # Sub-categories
+            for sc in ctx["atlas_mapping"].get("sub_categories", [])[:2]:
+                for st in sc.get("matched_sub_techniques", [])[:1]:
+                    lines.append(
+                        f"      Sub-category: {sc['atlas_id']} -> {st['name']}"
+                    )
+
+            # Defense assumptions exploited
+            exploited = ctx.get("assumptions_exploited", [])
+            if exploited:
+                lines.append(f"      Assumption exploited: {exploited[0]}")
+
+            # What was known
+            known_text = ctx.get("what_was_known", "")
+            if known_text:
+                # Truncate for terminal display
+                if len(known_text) > 120:
+                    known_text = known_text[:117] + "..."
+                lines.append(f"      Known: {known_text}")
+
+            # What might be new
+            new_text = ctx.get("what_might_be_new")
+            if new_text:
+                if len(new_text) > 120:
+                    new_text = new_text[:117] + "..."
+                lines.append(f"      Novelty: {new_text}")
+
+            # MAB insight
+            mab = ctx.get("mab_insight")
+            if mab:
+                if len(mab) > 120:
+                    mab = mab[:117] + "..."
+                lines.append(f"      MAB: {mab}")
+
+            # Unified literature
+            lit = ctx.get("literature", {})
+            matching = lit.get("matching_papers", [])
+            defense_breaking = lit.get("defense_breaking_papers", [])
+            related = lit.get("related_papers", [])
+            if matching:
+                for p in matching[:3]:
+                    first_author = (
+                        p.get("authors", "").split(",")[0].strip()
+                        or p.get("key", "?")
+                    )
+                    year = p.get("year", "?")
+                    result = (
+                        p.get("experimental_results")
+                        or p.get("mechanism")
+                        or ""
+                    )
+                    if len(result) > 80:
+                        result = result[:77] + "..."
+                    lines.append(
+                        f"      Paper: {first_author} ({year}) — {result}"
+                    )
+            if defense_breaking:
+                lines.append(
+                    f"      Defense-breaking: {len(defense_breaking)} paper(s)"
+                )
+            if related:
+                lines.append(
+                    f"      Related: {len(related)} paper(s)"
+                )
+            if lit.get("total_papers_searched"):
+                lines.append(
+                    f"      Searched: {lit['total_papers_searched']} "
+                    f"in-scope papers"
+                )
+
+            # Next steps (first one only for brevity)
+            steps = ctx.get("what_to_test_next", [])
+            if steps:
+                lines.append(f"      Next: {steps[0]}")
+        else:
+            # Fallback to old-style KB display
+            kb_matches = f.get("kb_matches", [])
+            if kb_matches:
+                refs = [m.get("first_demonstrated", "?") for m in kb_matches]
+                lines.append(
+                    f"      KB: {len(kb_matches)} match(es) — {', '.join(refs)}"
+                )
+            elif novelty == "candidate_new":
+                lines.append("      KB: 0 matches in knowledge base")
+
+        novel_dims = f.get("kb_novel_dimensions", [])
+        if novel_dims:
+            lines.append(
+                f"      Novel dims: {', '.join(d.replace('_', ' ') for d in novel_dims)}"
+            )
+        lines.append("")
+    if findings:
+        lines.append(
+            f"  Summary: {known_count} known, {novel_count} candidate novel, "
+            f"{len(findings) - known_count - novel_count} other"
+        )
     lines.append("")
 
     # Suggestions
@@ -860,6 +1005,30 @@ def format_terminal_output(
 
 
 # ── JSON output ──────────────────────────────────────────────────────────────
+
+def _strip_context(findings: List[Dict]) -> List[Dict]:
+    """Remove the heavy 'context' key for JSON serialization; keep a summary."""
+    out = []
+    for f in findings:
+        stripped = {k: v for k, v in f.items() if k != "context"}
+        ctx = f.get("context")
+        if ctx:
+            lit = ctx.get("literature", {})
+            stripped["context_summary"] = {
+                "novelty_status": lit.get("status"),
+                "what_was_known": ctx.get("what_was_known", ""),
+                "what_might_be_new": ctx.get("what_might_be_new"),
+                "assumptions_exploited": ctx.get("assumptions_exploited", []),
+                "what_to_test_next": ctx.get("what_to_test_next", []),
+                "matching_papers": len(lit.get("matching_papers", [])),
+                "related_papers": len(lit.get("related_papers", [])),
+                "defense_breaking_papers": len(
+                    lit.get("defense_breaking_papers", [])
+                ),
+            }
+        out.append(stripped)
+    return out
+
 
 def build_json_output(
     run_dir: Path, data: Dict, acc: Dict, attack: Dict,
@@ -892,7 +1061,7 @@ def build_json_output(
         },
         "attack": attack,
         "defense": defense,
-        "findings": findings,
+        "findings": _strip_context(findings),
         "suggestions": suggestions,
     }
 
@@ -906,7 +1075,8 @@ def analyze_run(run_dir: Path, json_only: bool = False) -> Dict:
     acc = compute_accuracy_stats(data["accuracy"])
     attack = analyze_attack_behavior(data)
     defense = analyze_defense_behavior(data)
-    findings = detect_findings(acc, attack, defense, data["backdoor_asr"])
+    findings = detect_findings(acc, attack, defense, data["backdoor_asr"],
+                               run_config=data.get("run_config"))
     suggestions = generate_suggestions(data, findings, attack, defense, acc)
 
     json_output = build_json_output(

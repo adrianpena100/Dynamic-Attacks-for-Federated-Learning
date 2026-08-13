@@ -23,10 +23,12 @@ REPORT_PATH = DB_DIR.parent / "docs" / "reports"
 sys.path.insert(0, str(DB_DIR))
 from atlas_mapping import (
     ATLAS_TECHNIQUES,
-    LITERATURE,
+    build_finding_context,
     classify_finding,
     get_attack_techniques,
     get_novelty_summary,
+    is_novel_dimension,
+    lookup_known_vulnerability,
 )
 
 
@@ -261,6 +263,30 @@ def find_resilient_defenses(conn):
     return [dict(r) for r in rows]
 
 
+def find_backdoor_success(conn):
+    """Find runs where backdoor ASR increased significantly."""
+    rows = conn.execute("""
+        SELECT
+            bc.strategy,
+            r.attack_mode,
+            r.layering_mode,
+            r.selection_mode,
+            bc.backdoor_asr_increase,
+            bc.attacked_final_backdoor_asr,
+            bc.accuracy_drop,
+            bc.attacked_final_accuracy,
+            bc.clean_final_accuracy,
+            ae.attack_name AS final_attack
+        FROM baseline_comparisons bc
+        JOIN runs r ON r.run_id = bc.attacked_run_id
+        LEFT JOIN attack_events ae ON ae.run_id = bc.attacked_run_id
+            AND ae.round = (SELECT MAX(round) FROM attack_events WHERE run_id = ae.run_id)
+        WHERE bc.backdoor_asr_increase > 0.1
+        ORDER BY bc.backdoor_asr_increase DESC
+    """).fetchall()
+    return [dict(r) for r in rows]
+
+
 # ---------------------------------------------------------------------------
 # Scoring
 # ---------------------------------------------------------------------------
@@ -301,6 +327,11 @@ def score_finding(finding_type, data):
     elif finding_type == "resilient_defense":
         weakness = 0.1
         effectiveness = 0.1
+        evidence = 0.6
+    elif finding_type == "backdoor_success":
+        asr = data.get("backdoor_asr_increase", 0) or 0
+        weakness = min(1.0, 0.5 + asr)
+        effectiveness = min(1.0, 0.5 + asr)
         evidence = 0.6
     else:
         weakness = 0.3
@@ -441,26 +472,107 @@ def generate_report(conn, findings):
             for t in c["atlas_techniques"]
         )
 
+        ctx = build_finding_context(
+            attack=f.get("attack", "unknown"),
+            defense=f.get("strategy", "unknown"),
+            pattern=f["pattern"],
+            accuracy_drop=f.get("accuracy_drop"),
+            slipthrough_rate=f.get("slipthrough_rate"),
+            trust_score=f.get("trust_score"),
+            dominant_attack_fraction=f.get("fraction"),
+        )
+
         lines.append(f"### Finding {i}: {f['pattern'].replace('_', ' ').title()} — {f['strategy']}")
         lines.append("")
         lines.append(f"| Field | Value |")
         lines.append(f"|-------|-------|")
-        lines.append(f"| Defense | {f['strategy']} |")
-        lines.append(f"| Attack | {f.get('attack', 'N/A')} |")
+        lines.append(f"| Defense | {f['strategy']} ({ctx['defense_profile']['category']}) |")
+        lines.append(f"| Attack | {f.get('attack', 'N/A')} ({ctx['attack_profile']['category']}) |")
         lines.append(f"| Pattern | {f['pattern']} |")
         lines.append(f"| ATLAS Techniques | {atlas_str} |")
         lines.append(f"| Novelty Status | **{c['novelty_status']}** |")
         lines.append(f"| Severity | {c['severity']} |")
-        lines.append(f"| Weakness Score | {s['defense_weakness_score']:.2f} |")
-        lines.append(f"| Effectiveness Score | {s['attack_effectiveness_score']:.2f} |")
-        lines.append(f"| Evidence Strength | {s['evidence_strength']:.2f} |")
-        lines.append(f"| Priority | {s['priority_score']:.2f} |")
+        lines.append(f"| Priority | {s['priority_score']:.2f} (weakness={s['defense_weakness_score']:.2f}, effectiveness={s['attack_effectiveness_score']:.2f}, evidence={s['evidence_strength']:.2f}) |")
         lines.append("")
-        lines.append(f"**Rationale:** {c['rationale']}")
+
+        # Narrative
+        lines.append(_generate_finding_narrative(f, ctx))
         lines.append("")
-        if c["literature_refs"]:
-            lines.append(f"**Literature:** {', '.join(c['literature_refs'])}")
+
+        # ATLAS sub-categories
+        if ctx["atlas_mapping"]["sub_categories"]:
+            lines.append("**ATLAS Sub-Categories:**")
+            for sc in ctx["atlas_mapping"]["sub_categories"]:
+                for st in sc["matched_sub_techniques"]:
+                    lines.append(f"- {sc['atlas_id']} → {st['name']}: {st['description']}")
             lines.append("")
+
+        # Defense assumptions exploited
+        if ctx["assumptions_exploited"]:
+            lines.append("**Defense Assumptions Exploited:**")
+            for assumption in ctx["assumptions_exploited"]:
+                lines.append(f"- {assumption}")
+            lines.append("")
+
+        # What was already known
+        lines.append(f"**What Was Known:** {ctx['what_was_known']}")
+        lines.append("")
+
+        # What might be new
+        if ctx["what_might_be_new"]:
+            lines.append(f"**Potential Novelty:** {ctx['what_might_be_new']}")
+            lines.append("")
+
+        # MAB insight
+        if ctx["mab_insight"]:
+            lines.append(f"**MAB Insight:** {ctx['mab_insight']}")
+            lines.append("")
+
+        # Unified literature context
+        lit = ctx["literature"]
+        if lit["matching_papers"] or lit["related_papers"] or lit["defense_breaking_papers"]:
+            lines.append("**Literature:**")
+            if lit["matching_papers"]:
+                lines.append(f"- Direct matches ({len(lit['matching_papers'])} papers):")
+                for p in lit["matching_papers"][:5]:
+                    first_author = p["authors"].split(",")[0].split(" et")[0] if p["authors"] else "Unknown"
+                    result_preview = ""
+                    if p.get("experimental_results"):
+                        result_preview = f" — {p['experimental_results']}"
+                    elif p.get("mechanism"):
+                        result_preview = f" — {p['mechanism']}"
+                    lines.append(
+                        f"  - {first_author} et al. ({p['year']}, {p['venue']})"
+                        f"{result_preview}")
+            if lit["defense_breaking_papers"]:
+                lines.append(f"- Defense-breaking papers targeting {f['strategy']}:")
+                for p in lit["defense_breaking_papers"][:3]:
+                    first_author = p["authors"].split(",")[0].split(" et")[0] if p["authors"] else "Unknown"
+                    result_preview = f" — {p['experimental_results']}" if p.get("experimental_results") else ""
+                    lines.append(
+                        f"  - {first_author} et al. ({p['year']}, {p['venue']})"
+                        f"{result_preview}")
+            if lit["related_papers"]:
+                lines.append(f"- {len(lit['related_papers'])} related papers")
+                for p in lit["related_papers"][:3]:
+                    first_author = p["authors"].split(",")[0].split(" et")[0] if p["authors"] else "Unknown"
+                    lines.append(
+                        f"  - {first_author} et al. ({p['year']}, {p['venue']}): {p['title'][:80]}")
+            if lit["attack_family"]:
+                lines.append(
+                    f"- Attack family: {lit['attack_family']} "
+                    f"({lit['attack_family_paper_count']} papers)")
+            lines.append(
+                f"- Total papers searched: {lit['total_papers_searched']}")
+            lines.append("")
+
+        # Next steps
+        lines.append("**Recommended Next Steps:**")
+        for step in ctx["what_to_test_next"]:
+            lines.append(f"- {step}")
+        lines.append("")
+        lines.append("---")
+        lines.append("")
 
     # --- Cross-defense comparison ---
     lines.append("## Cross-Defense Comparison")
@@ -559,6 +671,105 @@ def generate_report(conn, findings):
     lines.append("")
 
     return "\n".join(lines)
+
+
+def _generate_finding_narrative(finding, ctx):
+    """Generate a plain-English narrative for a finding."""
+    pattern = finding["pattern"]
+    strategy = finding["strategy"]
+    attack = finding.get("attack", "unknown")
+    novelty = finding["classification"]["novelty_status"]
+    defense_cat = ctx["defense_profile"]["category"]
+
+    if pattern == "defense_collapse":
+        clean = finding.get("clean_final_accuracy", 0) or 0
+        attacked = finding.get("attacked_final_accuracy", 0) or 0
+        drop = finding.get("accuracy_drop", 0) or 0
+        narrative = (
+            f"{strategy} ({defense_cat}) collapsed from {clean:.1%} to {attacked:.1%} "
+            f"accuracy under {attack}, a {drop:.1%} drop. "
+        )
+        if novelty == "known_weakness":
+            narrative += (
+                "This confirms a well-documented vulnerability in the literature. "
+            )
+        elif novelty == "candidate_new":
+            narrative += (
+                "This attack-defense combination has no direct prior literature match "
+                "and may represent a candidate novel finding. "
+            )
+        if ctx["assumptions_exploited"]:
+            narrative += (
+                f"The attack likely exploits: {ctx['assumptions_exploited'][0].lower()}"
+            )
+        return narrative
+
+    if pattern == "accuracy_degradation":
+        drop = finding.get("accuracy_drop", 0) or 0
+        narrative = (
+            f"{strategy} experienced {drop:.1%} accuracy degradation under {attack} "
+            f"without full collapse. "
+        )
+        if novelty == "known_weakness":
+            narrative += "This is consistent with published findings."
+        elif novelty == "candidate_new":
+            narrative += "This specific interaction lacks prior literature coverage."
+        return narrative
+
+    if pattern == "adaptive_convergence":
+        fraction = finding.get("fraction", 0)
+        narrative = (
+            f"The MAB attack engine converged to {attack} as the dominant attack "
+            f"against {strategy} ({fraction:.0%} selection rate). "
+            f"This defense fingerprinting — where different defenses elicit different "
+            f"dominant attacks — is a novel contribution of this framework."
+        )
+        return narrative
+
+    if pattern == "trust_failure":
+        narrative = (
+            f"Trust-based defense {strategy} assigned high trust scores to malicious "
+            f"clients, allowing them to contribute to aggregation. "
+            f"This suggests a gap in {strategy}'s trust scoring mechanism "
+            f"under the tested attack conditions."
+        )
+        return narrative
+
+    if pattern == "poor_trust_separation":
+        sep = finding.get("separation", 0)
+        narrative = (
+            f"{strategy} showed poor separation between benign and malicious client "
+            f"trust scores (gap: {sep:.3f}). The defense cannot reliably distinguish "
+            f"honest from compromised clients under these conditions."
+        )
+        return narrative
+
+    if pattern == "high_slipthrough":
+        rate = finding.get("slipthrough_rate", 0) or 0
+        narrative = (
+            f"{strategy} allowed {rate:.0%} of malicious clients through its "
+            f"aggregation filter. This high slipthrough rate means the defense's "
+            f"filtering mechanism is failing to identify compromised updates."
+        )
+        return narrative
+
+    if pattern == "stealth_evasion":
+        narrative = (
+            f"Stealth-capped malicious updates under {attack} fell within the "
+            f"honest norm distribution (p90), evading {strategy}'s detection. "
+            f"The attack maintains a benign statistical profile while poisoning."
+        )
+        return narrative
+
+    if pattern == "resilient_defense":
+        drop = finding.get("accuracy_drop", 0) or 0
+        narrative = (
+            f"{strategy} showed minimal accuracy impact ({drop:.1%}) under attack, "
+            f"demonstrating robustness in this configuration."
+        )
+        return narrative
+
+    return f"{pattern.replace('_', ' ').title()} detected for {strategy} under {attack}."
 
 
 def _get_convergence_implication(defense, attack):

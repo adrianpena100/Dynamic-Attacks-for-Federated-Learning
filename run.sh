@@ -36,17 +36,24 @@ if [[ ! -d "$RUN_OUTPUT_DIR" ]]; then
 fi
 
 if [[ -d "$RUN_OUTPUT_DIR" ]]; then
-  # Post-run analysis (local, no API call, always runs)
+  # 1. Per-run terminal analysis (reads CSVs, no DB dependency)
   "$PYTHON_BIN" "$ROOT_DIR/scripts/post_run_analysis.py" "$RUN_OUTPUT_DIR"
 
-  # Generate notebook report (always runs)
+  # 2. Ingest run into the database (idempotent — skips if already ingested)
+  "$PYTHON_BIN" "$ROOT_DIR/db/ingest.py" "$RUN_OUTPUT_DIR"
+
+  # 3. Re-analyze full database and update global vulnerability report
+  "$PYTHON_BIN" "$ROOT_DIR/db/analyze.py" \
+    || echo "Warning: DB analysis had issues." >&2
+
+  # 4. Generate notebook report
   "$PYTHON_BIN" "$ROOT_DIR/scripts/generate_run_report.py" "$RUN_OUTPUT_DIR"
 
-  # LLM analysis (optional — set CALL_LLM_ANALYSIS=0 to skip)
-  if [[ "${CALL_LLM_ANALYSIS:-1}" == "1" ]]; then
-    "$PYTHON_BIN" "$ROOT_DIR/scripts/llm_sweep_analysis.py" --sweeps-root "$RUN_OUTPUT_DIR" --call-api
-    echo "LLM analysis written inside: $RUN_OUTPUT_DIR"
-  fi
+  # 5. LLM analysis (always runs)
+  "$PYTHON_BIN" "$ROOT_DIR/scripts/llm_sweep_analysis.py" \
+    --sweeps-root "$RUN_OUTPUT_DIR" --call-api \
+    || echo "Warning: LLM analysis failed (API key or network issue)." >&2
+  echo "LLM analysis written inside: $RUN_OUTPUT_DIR"
 else
   echo "Warning: Could not determine run output directory for analysis." >&2
 fi

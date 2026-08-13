@@ -783,6 +783,9 @@ def ingest_standalone_run(run_dir, db_path=None):
             "UPDATE sweeps SET dataset=?, num_runs=1, strategies=? WHERE sweep_id=?",
             (r[1] if r else None, r[0] if r else None, sweep_id),
         )
+        n_cmp = _compute_baseline_comparisons(conn)
+        if n_cmp:
+            print(f"  Computed {n_cmp} baseline comparison(s)")
         conn.commit()
         print(f"  Done. Ingested 1 run into {db_path}")
     else:

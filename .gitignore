@@ -1,4 +1,5 @@
 logs/
+__pycache__/
 run5.sh
 final_model.pt
 .env
@@ -10,3 +11,4 @@ thesis_sweep_analysis.ipynb
 db/*.sqlite
 db/*.sqlite-shm
 db/*.sqlite-wal
+docs/updates/
