@@ -369,6 +369,52 @@ def _build_run_record(run_dir: Path) -> Dict[str, Any]:
     if "final_asr" not in rec and asr_vals:
         rec["final_asr"] = float(asr_vals[-1])
 
+    analysis_json = run_dir / "summaries" / "run_analysis.json"
+    if analysis_json.exists():
+        try:
+            analysis = json.loads(analysis_json.read_text(encoding="utf-8"))
+            findings = analysis.get("findings", [])
+            if findings:
+                kb_findings = []
+                for f in findings:
+                    entry: Dict[str, Any] = {
+                        "pattern": f.get("pattern"),
+                        "severity": f.get("severity"),
+                        "description": f.get("description"),
+                        "novelty_status": f.get("novelty_status"),
+                    }
+                    if f.get("atlas_techniques"):
+                        entry["atlas_techniques"] = f["atlas_techniques"]
+                    if f.get("rationale"):
+                        entry["rationale"] = f["rationale"]
+                    if f.get("literature_refs"):
+                        entry["literature_refs"] = f["literature_refs"][:10]
+                    ctx = f.get("context_summary") or f.get("context")
+                    if ctx:
+                        entry["assumptions_exploited"] = ctx.get("assumptions_exploited", [])
+                        entry["what_was_known"] = ctx.get("what_was_known", "")
+                        entry["what_might_be_new"] = ctx.get("what_might_be_new", "")
+                        entry["what_to_test_next"] = ctx.get("what_to_test_next", [])
+                        mp = ctx.get("matching_papers")
+                        rp = ctx.get("related_papers")
+                        dbp = ctx.get("defense_breaking_papers")
+                        if any(v is not None for v in (mp, rp, dbp)):
+                            entry["literature"] = {
+                                "matching_papers": mp if isinstance(mp, int) else len(mp or []),
+                                "related_papers": rp if isinstance(rp, int) else len(rp or []),
+                                "defense_breaking_papers": dbp if isinstance(dbp, int) else len(dbp or []),
+                            }
+                    kb_findings.append(entry)
+                rec["kb_findings"] = kb_findings
+            suggestions = analysis.get("suggestions", [])
+            if suggestions:
+                rec["kb_suggestions"] = [
+                    {"pattern": s.get("finding_pattern"), "text": s.get("text")}
+                    for s in suggestions[:5]
+                ]
+        except Exception:
+            pass
+
     return rec
 
 
@@ -462,14 +508,36 @@ def _build_strategy_prompt(payload_json: str) -> str:
     return (
         "You are analyzing one federated learning strategy sweep for Byzantine vulnerability assessment.\n"
         "Input contains run-level aggregates derived from all CSV files in metrics/ and summaries/,\n"
-        "plus per-round JSON telemetry from rounds/.\n"
+        "plus per-round JSON telemetry from rounds/.\n\n"
+        "IMPORTANT: The payload includes 'kb_findings' for each run — these are pre-computed findings\n"
+        "from a knowledge base of 205 adversarial ML papers. Each finding has:\n"
+        "- novelty_status: 'known_weakness', 'reproduced', 'candidate_new', or 'known_robust'\n"
+        "- atlas_techniques: MITRE ATLAS technique IDs (e.g. AML.T0018.000)\n"
+        "- matching_paper_refs: papers that tested this exact attack+defense combo\n"
+        "- assumptions_exploited: which defense assumptions the attack exploits\n"
+        "- what_was_known: what prior literature already established\n"
+        "- what_might_be_new: what appears novel about this finding\n"
+        "- literature counts: how many papers match, are related, or break this defense\n"
+        "- kb_suggestions: recommended follow-up experiments\n\n"
+        "You MUST use these KB findings in your report. For each vulnerability finding:\n"
+        "- Tag it as [KNOWN], [REPRODUCED], or [NOVEL] based on novelty_status\n"
+        "- Cite the matching papers by author and year\n"
+        "- State the ATLAS technique IDs\n"
+        "- Explain what was known vs what is new\n"
+        "- Include the defense assumptions being exploited\n\n"
+        "If the run used adaptive MAB attack selection, analyze the bandit_final_state:\n"
+        "- Which attack the MAB converged to and why that matters for this defense\n"
+        "- Whether the convergence confirms a known weakness or reveals a new one\n"
+        "- The reward source (server vs client) and its implications for threat model realism\n\n"
         "Deliver an evidence-grounded report with:\n"
         "1) Data coverage audit and telemetry gaps.\n"
         "2) Vulnerability profile: collapse behavior, ASR behavior, stealth behavior, defense slip-through.\n"
         "3) Most dangerous run patterns (timing, mode, layering, selection) inferred from run labels + metrics.\n"
         "4) Defense failure mechanism hypotheses (explicitly separate observed vs inferred).\n"
-        "5) Quantified findings with concrete numbers and thresholds.\n"
-        "6) Prioritized follow-up experiments (at least 8).\n"
+        "5) Knowledge base cross-reference: tag every finding as [KNOWN]/[REPRODUCED]/[NOVEL] with paper citations.\n"
+        "6) Quantified findings with concrete numbers and thresholds.\n"
+        "7) ATLAS technique mapping for each finding.\n"
+        "8) Prioritized follow-up experiments (at least 8), incorporating kb_suggestions.\n"
         "Use concise technical language. Avoid generic statements.\n\n"
         "Payload:\n"
         f"{payload_json}"
