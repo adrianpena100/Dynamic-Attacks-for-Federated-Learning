@@ -13,7 +13,7 @@
 --   CLIENT_METRICS      → metrics/evaluate_client__*.csv, train_client__*.csv
 --   ATTACK_EVENTS       → summaries/attack_timeline.csv, round_attack_stats.csv
 --   ATTACK_EVENT_LAYERS → summaries/attack_log.jsonl → attack_details.layer_details
---   ADAPTIVE_ATTACK_SCORES → NOT YET LOGGED (placeholder, needs AttackEngine changes)
+--   ADAPTIVE_ATTACK_SCORES → summaries/adaptive_bandit_state.csv (mode="adaptive" only)
 --   CLIENT_ATTACK_EVENTS   → summaries/attack_by_client_round.csv
 --   TRUST_METRICS       → summaries/trust_strategy_by_round.csv
 --   DEFENSE_SELECTION   → summaries/defense_selection_by_round.csv (krum/bulyan)
@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS runs (
     is_baseline         INTEGER NOT NULL DEFAULT 0,
     attack_enabled      INTEGER NOT NULL DEFAULT 0,
     attack_mode         TEXT,           -- "adaptive", "weighted_random", "phase", NULL for baselines
+    adaptive_reward_source TEXT DEFAULT 'server',  -- "server" or "client"
     selection_mode      TEXT,           -- "churn", "sticky", "per_round_random"
     layering_mode       TEXT,           -- "single", "fixed", "sample_k"
     churn_fraction      REAL,
@@ -206,9 +207,9 @@ CREATE TABLE IF NOT EXISTS attack_event_layers (
 
 -- -----------------------------------------------------------------------------
 -- ADAPTIVE_ATTACK_SCORES: MAB bandit state per attack per round
--- Source: NOT YET LOGGED. Requires adding logging to AttackEngine._adaptive_rewards_by_attack.
--- This table is a PLACEHOLDER for future use. The columns match the internal
--- bandit state that exists in memory but is not written to any file.
+-- Source: summaries/adaptive_bandit_state.csv
+-- Written by AttackEngine._write_adaptive_bandit_state() after each round's
+-- reward observation (mode="adaptive" only).
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS adaptive_attack_scores (
     run_id              TEXT NOT NULL REFERENCES runs(run_id),

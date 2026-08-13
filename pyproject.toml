@@ -222,7 +222,7 @@ mab-rfl-min-score = 0.05
 #   min-train-nodes=2
 #   min-evaluate-nodes=2
 #   min-available-nodes=2
-strategy = "multikrum"
+strategy = "fedmedian"
 
 
 # --------------------------------------------------------
@@ -258,7 +258,7 @@ num-nodes-to-select = 0
 # Partitioning:
 # - iid (default)
 # - dirichlet (non-IID; controlled by dirichlet-alpha)
-dataset = "ylecun/mnist"
+dataset = "flwrlabs/femnist"
 dataset-modality = "auto"
 dataset-train-split = "train"
 dataset-eval-split = "test"
@@ -276,7 +276,7 @@ audio-key = ""
 label-key = ""
 num-classes = 0
 partitioner = "dirichlet"
-dirichlet-alpha = 0.1
+dirichlet-alpha = 0.5
 data-seed = 42
 
 
@@ -342,7 +342,7 @@ data-seed = 42
 # --------------------------------------------------------
 # I keep the core training knobs here (rounds, sampling fractions, epochs, LR, batch size).
 
-num-server-rounds = 30
+num-server-rounds = 60
 fraction-train = 1.0
 fraction-evaluate = 1.0
 min-train-nodes = 2
@@ -457,7 +457,7 @@ layered_attacks = [
 
 intensity_ramp_mode = "linear"   # none|linear|exp
 intensity_ramp_start_round = 10
-intensity_ramp_end_round = 30
+intensity_ramp_end_round = 60
 intensity_ramp_multiplier_start = 1.0
 intensity_ramp_multiplier_end = 3.0
 intensity_cap = 0.0              # I cap the *effective* intensity (0 disables cap)
@@ -503,7 +503,7 @@ malicious_fraction_max = 0.3
 
 malicious_fraction_ramp_mode = "none"   # none|linear|exp
 malicious_fraction_ramp_start_round = 1
-malicious_fraction_ramp_end_round = 30
+malicious_fraction_ramp_end_round = 60
 malicious_fraction_ramp_value_start = 0.05
 malicious_fraction_ramp_value_end = 0.20
 malicious_fraction_cap = 0.0              # 0 disables cap
@@ -609,6 +609,14 @@ adaptive_patience = 2
 adaptive_window = 5
 adaptive_burn_in_rounds = 1
 
+# adaptive_reward_source:
+#   Where the MAB gets its feedback signal.
+#   - "server": centralized test accuracy from evaluate_fn (default, existing behavior).
+#     The attacker observes the global model's performance on a held-out test set.
+#   - "client": mean eval metric across malicious clients only.
+#     More realistic — the attacker only observes what its infected clients see
+#     when they evaluate the global model on their own local data.
+adaptive_reward_source = "client"
 
 
 # --------------------------------------------------------
@@ -656,7 +664,7 @@ mean_shift = 0.25
 
 [[tool.flwr.attack.phases]]
 start_round = 1
-end_round = 30
+end_round = 60
 attack_name = "none"
 
 
@@ -664,7 +672,7 @@ attack_name = "none"
 # Default to attacking from the beginning; use CLI overrides for delayed-onset experiments.
 [[tool.flwr.attack.windows]]
 start_round = 1
-end_round = 30
+end_round = 60
 
 
 

@@ -253,6 +253,50 @@ class AttackInjectedStrategyMixin:
 
         return messages
 
+    def aggregate_evaluate(self, server_round: int, replies):
+        replies_list = list(replies)
+        result = super().aggregate_evaluate(server_round, iter(replies_list))
+
+        engine = getattr(self, "_attack_engine", None)
+        if engine is not None:
+            try:
+                cfg = engine.attack_config
+                if (str(getattr(cfg, "adaptive_reward_source", "server")).strip().lower() == "client"
+                        and str(cfg.mode).strip().lower() == "adaptive"):
+                    plan = engine._round_plan.get(int(server_round), {})
+                    malicious_ids = set(int(x) for x in (plan.get("malicious_client_ids") or []))
+
+                    if malicious_ids:
+                        malicious_metrics = {}
+                        for msg in replies_list:
+                            src = getattr(getattr(msg, "metadata", None), "src_node_id", None)
+                            if src is None:
+                                continue
+                            cid = int(src)
+                            if cid not in malicious_ids:
+                                continue
+                            try:
+                                mr = msg.content["metrics"]
+                                md = {}
+                                for k in mr.keys():
+                                    try:
+                                        md[str(k)] = float(mr[k])
+                                    except Exception:
+                                        continue
+                                malicious_metrics[cid] = md
+                            except Exception:
+                                continue
+
+                        if malicious_metrics:
+                            engine.observe_malicious_client_evaluate(
+                                server_round=int(server_round),
+                                malicious_client_metrics=malicious_metrics,
+                            )
+            except Exception:
+                pass
+
+        return result
+
     def aggregate_train(self, server_round: int, replies):
         replies_list = list(replies)
         engine = getattr(self, "_attack_engine", None)

@@ -177,12 +177,14 @@ def analyze_attack_behavior(data: Dict) -> Dict:
     mode = ac.get("mode", rc.get("attack-mode", "adaptive"))
     selection = ac.get("selection_mode", rc.get("attack-selection-mode", "churn"))
     mal_frac = float(ac.get("malicious_fraction", rc.get("attack-malicious-fraction", 0.24)))
+    reward_source = str(ac.get("adaptive_reward_source", "server")).strip().lower() or "server"
 
     return {
         "active": True,
         "mode": mode,
         "selection_mode": selection,
         "malicious_fraction": mal_frac,
+        "adaptive_reward_source": reward_source,
         "total_rounds": total_rounds,
         "attack_rounds": total_attack_rounds,
         "dominant_attack": dominant_attack,
@@ -366,17 +368,20 @@ def detect_findings(
 
     if (attack.get("mode") == "adaptive"
             and attack.get("dominant_fraction", 0) > 0.3):
+        reward_src = attack.get("adaptive_reward_source", "server")
         findings.append({
             "pattern": "adaptive_convergence",
             "severity": "medium",
             "description": (
                 f"Adaptive MAB converged to {dominant} "
-                f"({attack['dominant_fraction']:.0%} of rounds)"
+                f"({attack['dominant_fraction']:.0%} of rounds) "
+                f"[reward source: {reward_src}]"
             ),
             "evidence": {
                 "dominant_attack": dominant,
                 "dominant_fraction": attack["dominant_fraction"],
                 "all_counts": attack.get("all_attack_counts"),
+                "adaptive_reward_source": reward_src,
             },
         })
 
@@ -698,15 +703,25 @@ def generate_suggestions(
 
     # Cross-cutting suggestions
     if "adaptive_convergence" in patterns:
+        reward_src = attack.get("adaptive_reward_source", "server")
+        reward_note = ""
+        if reward_src == "client":
+            reward_note = (
+                f" Note: this used client-side reward (malicious clients' "
+                f"local eval) — the server-side MAB may converge to a "
+                f"different attack."
+            )
         suggestions.append({
             "finding_pattern": "adaptive_convergence",
             "text": (
                 f"Adaptive MAB converged to {dominant} in "
-                f"{attack.get('dominant_fraction', 0):.0%} of rounds — "
+                f"{attack.get('dominant_fraction', 0):.0%} of rounds "
+                f"(reward source: {reward_src}) — "
                 f"this is the dominant vulnerability for {strategy}. "
                 f"Run a targeted single-attack experiment with just "
                 f"{dominant} to measure its standalone impact, then test "
                 f"a defense parameter adjustment against that attack."
+                f"{reward_note}"
             ),
             "param_changes": [],
         })
@@ -790,11 +805,15 @@ def format_terminal_output(
     if attack.get("active"):
         lines.append("ATTACK CONFIG")
         lines.append("-" * 40)
-        lines.append(
-            f"  Mode           : {attack['mode']} "
+        reward_src = attack.get("adaptive_reward_source", "server")
+        mode_detail = (
+            f"{attack['mode']} "
             f"({attack['selection_mode']}, "
             f"{attack['malicious_fraction']:.0%} malicious)"
         )
+        if attack["mode"] == "adaptive":
+            mode_detail += f"  [reward: {reward_src}]"
+        lines.append(f"  Mode           : {mode_detail}")
         dom = attack["dominant_attack"]
         lines.append(
             f"  Dominant Attack: {dom} "

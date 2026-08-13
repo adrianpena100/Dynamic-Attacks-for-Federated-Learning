@@ -225,6 +225,7 @@ class AttackConfig:
     adaptive_patience: int = 2
     adaptive_window: int = 5
     adaptive_burn_in_rounds: int = 1
+    adaptive_reward_source: str = "server"  # server|client
 
     # Stealth mode for update poisoning: cap crafted malicious update norm to
     # a quantile of the honest norm distribution, optionally scaled.
@@ -416,6 +417,7 @@ def load_attack_config(*, run_config: Dict[str, Any]) -> AttackConfig:
     adaptive_patience = get_int("adaptive_patience", 2)
     adaptive_window = get_int("adaptive_window", 5)
     adaptive_burn_in_rounds = get_int("adaptive_burn_in_rounds", 1)
+    adaptive_reward_source = str(attack.get("adaptive_reward_source", "server") or "server").strip().lower()
 
     stealth_mode = bool(attack.get("stealth_mode", False))
     stealth_norm_quantile = get_float("stealth_norm_quantile", 0.9)
@@ -724,17 +726,23 @@ def load_attack_config(*, run_config: Dict[str, Any]) -> AttackConfig:
             random_intensity_mode = v
     if "attack-random-intensity-value" in run_config:
         try:
-            random_intensity_value = float(run_config.get("attack-random-intensity-value"))
+            _riv = float(run_config.get("attack-random-intensity-value"))
+            if _riv >= 0.0:
+                random_intensity_value = _riv
         except Exception:
             pass
     if "attack-random-intensity-min" in run_config:
         try:
-            random_intensity_min = float(run_config.get("attack-random-intensity-min"))
+            _rim = float(run_config.get("attack-random-intensity-min"))
+            if _rim >= 0.0:
+                random_intensity_min = _rim
         except Exception:
             pass
     if "attack-random-intensity-max" in run_config:
         try:
-            random_intensity_max = float(run_config.get("attack-random-intensity-max"))
+            _rix = float(run_config.get("attack-random-intensity-max"))
+            if _rix >= 0.0:
+                random_intensity_max = _rix
         except Exception:
             pass
     if "attack-random-relative-to-update-norm-prob" in run_config:
@@ -1197,6 +1205,7 @@ def load_attack_config(*, run_config: Dict[str, Any]) -> AttackConfig:
         adaptive_patience=int(max(0, adaptive_patience)),
         adaptive_window=int(max(0, adaptive_window)),
         adaptive_burn_in_rounds=int(max(0, adaptive_burn_in_rounds)),
+        adaptive_reward_source=str(adaptive_reward_source),
         stealth_mode=bool(stealth_mode),
         stealth_norm_quantile=float(stealth_norm_quantile),
         stealth_norm_multiplier=float(stealth_norm_multiplier),
@@ -1678,6 +1687,8 @@ class AttackRecorder:
                 "cooldown_rounds": getattr(self.attack_config, "cooldown_rounds", 0),
                 "deterministic_per_round": self.attack_config.deterministic_per_round,
                 "mode": self.attack_config.mode,
+                "adaptive_reward_source": getattr(self.attack_config, "adaptive_reward_source", "server"),
+                "adaptive_metric": getattr(self.attack_config, "adaptive_metric", "accuracy"),
                 "weights": self.attack_config.weights,
                 "phases": [p.__dict__ for p in self.attack_config.phases],
                 "windows": [w.__dict__ for w in self.attack_config.windows],
@@ -2508,6 +2519,9 @@ class AttackEngine:
 
         self._eval_metrics_by_round[r] = dict(md)
 
+        if str(self.attack_config.adaptive_reward_source).strip().lower() == "client":
+            return
+
         metric_key = str(self.attack_config.adaptive_metric).strip() or "accuracy"
         cur = md.get(metric_key)
         if cur is None:
@@ -2538,6 +2552,107 @@ class AttackEngine:
             # Switching attacks resets the fail counter.
             self._adaptive_current_attack = attack_used
             self._adaptive_consecutive_fails = 0
+
+        self._write_adaptive_bandit_state(server_round=r)
+
+    # Metric name mapping: adaptive_metric uses server-side names, clients use
+    # their own keys.  This dict translates when reward_source == "client".
+    _CLIENT_METRIC_MAP: Dict[str, str] = {
+        "accuracy": "eval_acc",
+        "loss": "eval_loss",
+    }
+
+    def observe_malicious_client_evaluate(
+        self,
+        *,
+        server_round: int,
+        malicious_client_metrics: Dict[int, Dict[str, float]],
+    ) -> None:
+        """Compute adaptive reward from malicious clients' local evaluation."""
+
+        if not malicious_client_metrics:
+            return
+
+        r = int(server_round)
+        metric_key = str(self.attack_config.adaptive_metric).strip() or "accuracy"
+        client_key = self._CLIENT_METRIC_MAP.get(metric_key, metric_key)
+
+        values: List[float] = []
+        for _cid, md in malicious_client_metrics.items():
+            v = md.get(client_key)
+            if v is not None:
+                values.append(float(v))
+
+        if not values:
+            return
+
+        mean_metric = sum(values) / len(values)
+
+        self._eval_metrics_by_round[r] = {metric_key: mean_metric}
+
+        prev = self._eval_metrics_by_round.get(r - 1, {}).get(metric_key)
+        if prev is None:
+            reward = -float(mean_metric)
+        else:
+            reward = float(prev) - float(mean_metric)
+
+        attack_used = str(self._attack_name_by_round.get(r, "none") or "none").strip().lower()
+        self._adaptive_rewards_by_attack.setdefault(attack_used, []).append(float(reward))
+
+        if self._adaptive_current_attack is None:
+            self._adaptive_current_attack = attack_used
+
+        if attack_used == self._adaptive_current_attack:
+            min_delta = float(self.attack_config.adaptive_min_delta)
+            if float(reward) < float(min_delta):
+                self._adaptive_consecutive_fails += 1
+            else:
+                self._adaptive_consecutive_fails = 0
+        else:
+            self._adaptive_current_attack = attack_used
+            self._adaptive_consecutive_fails = 0
+
+        self._write_adaptive_bandit_state(server_round=r)
+
+    def _write_adaptive_bandit_state(self, *, server_round: int) -> None:
+        """Write per-attack bandit state to summaries/adaptive_bandit_state.csv."""
+
+        if self.artifact_dir is None:
+            return
+        if str(self.attack_config.mode).strip().lower() != "adaptive":
+            return
+
+        csv_path = self.artifact_dir / "summaries" / "adaptive_bandit_state.csv"
+
+        if not csv_path.exists():
+            csv_path.write_text(
+                "round,attack_name,reward,cumulative_reward,estimated_value,"
+                "times_selected,selected_this_round\n",
+                encoding="utf-8",
+            )
+
+        r = int(server_round)
+        candidates = self._candidate_attacks()
+        chosen = str(self._attack_name_by_round.get(r, "none")).strip().lower()
+        window = int(max(1, self.attack_config.adaptive_window))
+
+        lines: List[str] = []
+        for attack in candidates:
+            rewards = self._adaptive_rewards_by_attack.get(attack, [])
+            times_selected = len(rewards)
+            cumulative = sum(float(x) for x in rewards) if rewards else 0.0
+            recent = rewards[-window:] if rewards else []
+            estimated = (sum(float(x) for x in recent) / len(recent)) if recent else 0.0
+            selected = 1 if attack == chosen else 0
+            rwd = float(rewards[-1]) if (selected and rewards) else 0.0
+            lines.append(
+                f"{r},{attack},{rwd:.10g},{cumulative:.10g},"
+                f"{estimated:.10g},{times_selected},{selected}\n"
+            )
+
+        if lines:
+            with csv_path.open("a", encoding="utf-8") as f:
+                f.writelines(lines)
 
     def plan_round(self, *, server_round: int, selected_client_ids: List[int]) -> Dict[str, Any]:
         """Plan the attack for this round once and cache it.

@@ -311,6 +311,15 @@ def _parse_run_summary_json(run_dir: Path) -> Dict[str, Any]:
         out["final_acc"] = float(final_acc)
     if final_asr is not None:
         out["final_asr"] = float(final_asr)
+
+    rac = obj.get("resolved_attack_config") or {}
+    atk_mode = str(rac.get("mode", "")).strip().lower()
+    if atk_mode:
+        out["attack_mode"] = atk_mode
+    reward_src = str(rac.get("adaptive_reward_source", "")).strip().lower()
+    if reward_src:
+        out["adaptive_reward_source"] = reward_src
+
     return out
 
 
@@ -335,6 +344,25 @@ def _build_run_record(run_dir: Path) -> Dict[str, Any]:
     rec["metrics_accuracy"] = _series_stats(acc_vals)
     rec["metrics_backdoor_asr"] = _series_stats(asr_vals)
     rec["metrics_loss"] = _series_stats(loss_vals)
+
+    bandit_csv = run_dir / "summaries" / "adaptive_bandit_state.csv"
+    if bandit_csv.exists():
+        try:
+            import csv as _csv
+            with open(bandit_csv, encoding="utf-8") as _bf:
+                rows = list(_csv.DictReader(_bf))
+            last_round = max((int(r["round"]) for r in rows), default=0)
+            final_rows = [r for r in rows if int(r["round"]) == last_round]
+            bandit_summary = {}
+            for r in sorted(final_rows, key=lambda x: float(x["estimated_value"]), reverse=True):
+                bandit_summary[r["attack_name"]] = {
+                    "estimated_value": float(r["estimated_value"]),
+                    "times_selected": int(r["times_selected"]),
+                    "cumulative_reward": float(r["cumulative_reward"]),
+                }
+            rec["bandit_final_state"] = bandit_summary
+        except Exception:
+            pass
 
     if "final_acc" not in rec and acc_vals:
         rec["final_acc"] = float(acc_vals[-1])

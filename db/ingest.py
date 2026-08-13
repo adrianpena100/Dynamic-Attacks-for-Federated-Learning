@@ -23,6 +23,7 @@ KNOWN_RUN_COLUMNS = {
     "strategy", "dataset", "partitioner", "dirichlet-alpha", "seed",
     "num-server-rounds", "fraction-train", "local-epochs", "learning-rate",
     "batch-size", "attack-mode", "attack-selection-mode", "attack-layering-mode",
+    "attack-adaptive-reward-source",
     "attack-churn-fraction", "attack-window-start-round", "attack-window-end-round",
     "attack-intensity-ramp-multiplier-end", "attack-malicious-fraction",
     "attack-malicious-fraction-mode", "attack-seed", "model",
@@ -114,6 +115,11 @@ def _ensure_db(db_path):
     except sqlite3.OperationalError:
         conn.execute("ALTER TABLE agent_recommendations ADD COLUMN atlas_technique_id TEXT")
         conn.execute("ALTER TABLE agent_recommendations ADD COLUMN novelty_status TEXT")
+        conn.commit()
+    try:
+        conn.execute("SELECT adaptive_reward_source FROM runs LIMIT 0")
+    except sqlite3.OperationalError:
+        conn.execute("ALTER TABLE runs ADD COLUMN adaptive_reward_source TEXT DEFAULT 'server'")
         conn.commit()
     return conn
 
@@ -465,6 +471,37 @@ def _ingest_defense_selection(conn, run_id, summaries_dir, client_map,
     return len(rows)
 
 
+def _ingest_adaptive_scores(conn, run_id, summaries_dir):
+    csv_path = summaries_dir / "adaptive_bandit_state.csv"
+    data = _read_csv(csv_path)
+    if not data:
+        return 0
+
+    rows = []
+    for row in data:
+        rnd = _safe_int(row.get("round"))
+        attack_name = row.get("attack_name", "").strip()
+        if rnd is None or not attack_name:
+            continue
+        rows.append((
+            run_id,
+            rnd,
+            attack_name,
+            _safe_float(row.get("reward")),
+            _safe_float(row.get("cumulative_reward")),
+            _safe_float(row.get("estimated_value")),
+            _safe_int(row.get("times_selected")),
+            _safe_int(row.get("selected_this_round")),
+        ))
+
+    if rows:
+        conn.executemany(
+            "INSERT OR IGNORE INTO adaptive_attack_scores VALUES (?,?,?,?,?,?,?,?)",
+            rows,
+        )
+    return len(rows)
+
+
 # ---------------------------------------------------------------------------
 # Load client number map
 # ---------------------------------------------------------------------------
@@ -537,9 +574,32 @@ def _ingest_one_run(conn, run_dir, sweep_id, sweep_row=None):
 
     run_id = f"run_{_uid()}"
 
+    adaptive_reward_source = "server"
+    summary_json = run_dir / "summaries" / "run_config_and_summary.json"
+    if summary_json.exists():
+        try:
+            with open(summary_json) as _f:
+                _sj = json.load(_f)
+            _rac = _sj.get("resolved_attack_config", {})
+            adaptive_reward_source = str(_rac.get("adaptive_reward_source", "server") or "server").strip().lower()
+        except Exception:
+            pass
+    if adaptive_reward_source not in ("server", "client"):
+        adaptive_reward_source = "server"
+
     conn.execute(
-        """INSERT INTO runs VALUES
-           (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+        """INSERT INTO runs (
+               run_id, sweep_id, label, run_name, run_folder,
+               strategy, dataset, partitioner, dirichlet_alpha, is_iid,
+               seed, num_clients, num_rounds, fraction_train,
+               local_epochs, learning_rate, batch_size,
+               is_baseline, attack_enabled,
+               attack_mode, adaptive_reward_source, selection_mode, layering_mode,
+               churn_fraction, attack_window_start, attack_window_end,
+               ramp_end, malicious_fraction,
+               model_architecture, dataset_modality,
+               status, created_at
+           ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (
             run_id, sweep_id, label, run_dir.name, run_folder,
             strategy, dataset, partitioner, dirichlet_alpha, is_iid,
@@ -551,7 +611,7 @@ def _ingest_one_run(conn, run_dir, sweep_id, sweep_row=None):
             _safe_float(rc.get("learning-rate")),
             _safe_int(rc.get("batch-size")),
             is_baseline, attack_enabled,
-            attack_mode, selection_mode, layering_mode,
+            attack_mode, adaptive_reward_source, selection_mode, layering_mode,
             _safe_float(rc.get("attack-churn-fraction")),
             _safe_int(rc.get("attack-window-start-round")),
             _safe_int(rc.get("attack-window-end-round")),
@@ -586,6 +646,7 @@ def _ingest_one_run(conn, run_dir, sweep_id, sweep_row=None):
     n_cli_atk = 0
     n_trust = 0
     n_def = 0
+    n_adaptive = 0
 
     if summaries_dir.exists():
         client_fwd, client_rev = _load_client_map(summaries_dir)
@@ -600,12 +661,13 @@ def _ingest_one_run(conn, run_dir, sweep_id, sweep_row=None):
         n_def = _ingest_defense_selection(
             conn, run_id, summaries_dir, client_fwd, attack_client_data
         )
+        n_adaptive = _ingest_adaptive_scores(conn, run_id, summaries_dir)
 
     bl_tag = "baseline" if is_baseline else "attacked"
     print(
         f"  {bl_tag:8s} {strategy:14s} {dataset:25s} "
         f"srv={n_srv} cli={n_cli} atk={n_atk} layers={n_layers} "
-        f"cli_atk={n_cli_atk} trust={n_trust} def={n_def}"
+        f"cli_atk={n_cli_atk} trust={n_trust} def={n_def} adaptive={n_adaptive}"
     )
     return run_id
 
