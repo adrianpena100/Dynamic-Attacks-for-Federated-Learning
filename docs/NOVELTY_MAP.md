@@ -510,11 +510,11 @@ Without this, the central contribution (attack-side MAB) cannot be validated as 
 | Fung 2020 (FoolsGold) | https://www.usenix.org/conference/raid2020/presentation/fung |
 | Wan 2022 (MAB-RFL) | https://www.ijcai.org/proceedings/2022/106 |
 | Chen 2023 (FLRAM) | https://www.mdpi.com/2079-9292/12/21/4463 |
-| Pillutla 2022 (RFA) | IEEE TSP |
-| Karimireddy 2021 (CenteredClipping) | ICML 2021 |
+| Pillutla 2022 (RFA) | https://arxiv.org/abs/1912.13445 |
+| Karimireddy 2021 (CenteredClipping) | https://arxiv.org/abs/2012.10333 |
 | Nguyen 2022 (FLAME) | https://www.usenix.org/conference/usenixsecurity22/presentation/nguyen |
-| Karimireddy 2022 (Bucketing) | ICLR 2022 |
-| Farhadkhani 2022 (RESAM) | ICML 2022 |
+| Karimireddy 2022 (Bucketing) | https://arxiv.org/abs/2006.09365 |
+| Farhadkhani 2022 (RESAM) | https://arxiv.org/abs/2205.12173 |
 | Shejwalkar 2021 (DnC) | https://github.com/vrt1shjwlkr/NDSS21-Model-Poisoning |
 
 ### Key Attack Papers
@@ -523,29 +523,29 @@ Without this, the central contribution (attack-side MAB) cannot be validated as 
 |-------|------|
 | Baruch 2019 (ALIE) | https://arxiv.org/abs/1902.06156 |
 | Fang 2020 (Local Model Poisoning) | https://www.usenix.org/conference/usenixsecurity20/presentation/fang |
-| Xie 2019 (IPM) | UAI 2019 |
+| Xie 2019 (IPM) | https://arxiv.org/abs/1903.03936 |
 | Bagdasaryan 2020 (Backdoor) | https://proceedings.mlr.press/v108/bagdasaryan20a.html |
-| Xie 2020 (DBA) | ICLR 2020 |
-| Wang 2020 (Edge-case) | NeurIPS 2020 |
-| Zhang 2022 (Neurotoxin) | ICML 2022 |
+| Xie 2020 (DBA) | https://openreview.net/forum?id=rkgyS0VFvr |
+| Wang 2020 (Edge-case) | https://arxiv.org/abs/2007.05084 |
+| Zhang 2022 (Neurotoxin) | https://arxiv.org/abs/2206.10341 |
 | Xie 2025 (PoisonedFL) | https://arxiv.org/abs/2404.15611 |
-| Shejwalkar 2022 (Back to Drawing Board) | IEEE S&P 2022 |
+| Shejwalkar 2022 (Back to Drawing Board) | https://arxiv.org/abs/2108.10241 |
 
 ### Security Conference Papers
 
 | Paper | Link |
 |-------|------|
-| Mozaffari 2023 (FRL) | USENIX Security 2023 |
-| Krauss 2023 (MESAS) | ACM CCS 2023 |
-| Rieger 2022 (DeepSight) | NDSS 2022 |
-| Fereidooni 2024 (FreqFed) | NDSS 2024 |
-| Fang 2025 (FoundationFL) | NDSS 2025 |
-| Lycklama 2023 (RoFL) | IEEE S&P 2023 |
-| Cao 2023 (FedRecover) | IEEE S&P 2023 |
-| Choudhary 2024 (HIDRA) | IEEE S&P 2024 |
-| Fang 2024 (BRDFL) | ACM CCS 2024 |
-| Zhang 2022 (FLDetector) | KDD 2022 |
-| Liu 2024 (BadSampler) | KDD 2024 |
+| Mozaffari 2023 (FRL) | https://www.usenix.org/conference/usenixsecurity23/presentation/mozaffari |
+| Krauss 2023 (MESAS) | https://dl.acm.org/doi/10.1145/3576915.3623212 |
+| Rieger 2022 (DeepSight) | https://arxiv.org/abs/2201.00763 |
+| Fereidooni 2024 (FreqFed) | https://arxiv.org/abs/2312.04432 |
+| Fang 2025 (FoundationFL) | https://arxiv.org/abs/2501.17381 |
+| Lycklama 2023 (RoFL) | https://arxiv.org/abs/2107.03311 |
+| Cao 2023 (FedRecover) | https://arxiv.org/abs/2210.10936 |
+| Choudhary 2024 (HIDRA) | https://arxiv.org/abs/2312.14461 |
+| Fang 2024 (BRDFL) | https://arxiv.org/abs/2406.10416 |
+| Zhang 2022 (FLDetector) | https://arxiv.org/abs/2207.09209 |
+| Liu 2024 (BadSampler) | https://arxiv.org/abs/2406.12222 |
 
 ### Benchmark Papers
 
@@ -554,7 +554,7 @@ Without this, the central contribution (attack-side MAB) cannot be validated as 
 | Zhang 2025 (FLPoison/SoK) | https://github.com/vio1etus/FLPoison |
 | Li 2024 (BLADES) | https://github.com/lishenghui/blades |
 | Dao 2025 (BackFed) | https://github.com/thinh-dao/BackFed |
-| Han 2024 (FedSecurity) | KDD 2024 / FedML |
+| Han 2024 (FedSecurity) | https://arxiv.org/abs/2306.04959 |
 | Garcia 2025 (ByzFL) | https://github.com/LPD-EPFL/byzfl |
 | Xu 2025 (LASA) | https://github.com/JiiahaoXU/LASA |
 
@@ -562,14 +562,14 @@ Without this, the central contribution (attack-side MAB) cannot be validated as 
 
 | Paper | Link |
 |-------|------|
-| Alistarh 2018 (Byzantine SGD) | NeurIPS 2018 |
-| Bernstein 2019 (signSGD majority) | ICLR 2019 |
+| Alistarh 2018 (Byzantine SGD) | https://arxiv.org/abs/1803.08917 |
+| Bernstein 2019 (signSGD majority) | https://arxiv.org/abs/1810.05291 |
 | Allen-Zhu 2021 (SafeguardSGD) | ICLR 2021 |
 | El Mhamdi 2021 (Distributed Momentum) | ICLR 2021 |
 | Allouah 2023 (Breakdown Points) | NeurIPS 2023 |
-| Liu 2023 (Gradient Splitting) | ICML 2023 |
-| Xu 2022 (SignGuard) | IEEE ICDCS 2022 |
-| Sun 2019 (Can You Really Backdoor FL?) | NeurIPS Workshop 2019 |
+| Liu 2023 (Gradient Splitting) | https://arxiv.org/abs/2302.06079 |
+| Xu 2022 (SignGuard) | https://arxiv.org/abs/2109.05872 |
+| Sun 2019 (Can You Really Backdoor FL?) | https://arxiv.org/abs/1911.07963 |
 
 ### Awesome-FL Source
 
@@ -596,147 +596,147 @@ These are the papers the framework's novelty classifier directly compares agains
 
 | # | Key | Authors | Title | Venue | Attacks Tested | Defenses Tested | Key Findings |
 |---|-----|---------|-------|-------|----------------|-----------------|--------------|
-| 1 | `blanchard2017` | Blanchard et al. | Machine Learning with Adversaries: Byzantine Tolerant Gradient Descent | NeurIPS | gaussian_noise | krum | Proposed Krum; tolerates up to f < n/2 - 1 Byzantine workers. Convergence proven under IID; accuracy degrades under non-IID. |
+| 1 | `blanchard2017` | Blanchard et al. | [Machine Learning with Adversaries: Byzantine Tolerant Gradient Descent](https://arxiv.org/abs/1703.02757) | NeurIPS | gaussian_noise | krum | Proposed Krum; tolerates up to f < n/2 - 1 Byzantine workers. Convergence proven under IID; accuracy degrades under non-IID. |
 
 #### 2018 (2 papers)
 
 | # | Key | Authors | Title | Venue | Attacks Tested | Defenses Tested | Key Findings |
 |---|-----|---------|-------|-------|----------------|-----------------|--------------|
-| 2 | `elmhamdi2018` | El Mhamdi et al. | The Hidden Vulnerability of Distributed Learning in Byzantium | ICML | byzantine | bulyan, krum | Proposed Bulyan; showed Krum alone is vulnerable to dimension-coupled attacks. Bulyan adds coordinate-wise trimming on top of Krum selection. |
-| 3 | `yin2018` | Yin et al. | Byzantine-Robust Distributed Learning: Towards Optimal Statistical Rates | ICML | label_flip, gaussian_noise | fedtrimmedavg, fedmedian | Proposed coordinate-wise trimmed mean and median; achieves near-optimal statistical rates under Byzantine faults with IID data. |
+| 2 | `elmhamdi2018` | El Mhamdi et al. | [The Hidden Vulnerability of Distributed Learning in Byzantium](https://arxiv.org/abs/1802.07927) | ICML | byzantine | bulyan, krum | Proposed Bulyan; showed Krum alone is vulnerable to dimension-coupled attacks. Bulyan adds coordinate-wise trimming on top of Krum selection. |
+| 3 | `yin2018` | Yin et al. | [Byzantine-Robust Distributed Learning: Towards Optimal Statistical Rates](https://arxiv.org/abs/1803.01498) | ICML | label_flip, gaussian_noise | fedtrimmedavg, fedmedian | Proposed coordinate-wise trimmed mean and median; achieves near-optimal statistical rates under Byzantine faults with IID data. |
 
 #### 2019 (4 papers)
 
 | # | Key | Authors | Title | Venue | Attacks Tested | Defenses Tested | Key Findings |
 |---|-----|---------|-------|-------|----------------|-----------------|--------------|
-| 4 | `zeno2019` | Xie et al. | Zeno: Distributed SGD with Suspicion-Based Fault-Tolerance | ICML | sign_flip, gaussian_noise, label_flip | zeno, krum, fedtrimmedavg | Zeno uses a small validation set to score updates by loss reduction. Outperforms Krum and trimmed mean under sign-flip and label-flip attacks. |
-| 5 | `baruch2019` | Baruch et al. | A Little Is Enough: Circumventing Defenses For Distributed Learning | NeurIPS | alie | krum, bulyan, fedtrimmedavg (+1) | ALIE crafts updates at mu - z*sigma to stay within honest distribution. Bypasses Krum, Bulyan, trimmed mean, and median with as few as 20% maliciou... |
-| 6 | `sun2019` | Sun et al. | Can You Really Backdoor Federated Learning? | NeurIPS Workshop | backdoor | krum, fedtrimmedavg, bulyan (+1) | Backdoor attacks in FL succeed even with defenses; Krum and trimmed mean reduce but do not eliminate backdoor ASR. |
-| 7 | `xie2019ipm` | Xie et al. | Fall of Empires: Breaking Byzantine-tolerant SGD by Inner Product Manipulation | UAI | ipm | krum, fedmedian | Inner Product Manipulation (IPM) breaks Krum and median by aligning poisoned updates with negative of true gradient. Converges to arbitrary target. |
+| 4 | `zeno2019` | Xie et al. | [Zeno: Distributed SGD with Suspicion-Based Fault-Tolerance](https://arxiv.org/abs/1805.10032) | ICML | sign_flip, gaussian_noise, label_flip | zeno, krum, fedtrimmedavg | Zeno uses a small validation set to score updates by loss reduction. Outperforms Krum and trimmed mean under sign-flip and label-flip attacks. |
+| 5 | `baruch2019` | Baruch et al. | [A Little Is Enough: Circumventing Defenses For Distributed Learning](https://arxiv.org/abs/1902.06156) | NeurIPS | alie | krum, bulyan, fedtrimmedavg, fedmedian | ALIE crafts updates at mu - z*sigma to stay within honest distribution. Bypasses Krum, Bulyan, trimmed mean, and median with as few as 20% malicious clients. |
+| 6 | `sun2019` | Sun et al. | [Can You Really Backdoor Federated Learning?](https://arxiv.org/abs/1911.07963) | NeurIPS Workshop | backdoor | krum, fedtrimmedavg, bulyan, norm_bounding | Backdoor attacks in FL succeed even with defenses; Krum and trimmed mean reduce but do not eliminate backdoor ASR. Constrain-and-scale evades norm-based defenses. |
+| 7 | `xie2019ipm` | Xie et al. | [Fall of Empires: Breaking Byzantine-tolerant SGD by Inner Product Manipulation](https://arxiv.org/abs/1903.03936) | UAI | ipm | krum, fedmedian | Inner Product Manipulation (IPM) breaks Krum and median by aligning poisoned updates with negative of true gradient. Converges to arbitrary target. |
 
 #### 2020 (5 papers)
 
 | # | Key | Authors | Title | Venue | Attacks Tested | Defenses Tested | Key Findings |
 |---|-----|---------|-------|-------|----------------|-----------------|--------------|
-| 8 | `bagdasaryan2020` | Bagdasaryan et al. | How To Backdoor Federated Learning | AISTATS | backdoor, constrain_and_scale | norm_bounding | -- |
-| 9 | `dba2020` | Xie et al. | DBA: Distributed Backdoor Attacks against Federated Learning | ICLR | dba | krum, norm_bounding, rfa | -- |
-| 10 | `wang2020` | Wang et al. | Attack of the Tails: Yes, You Really Can Backdoor Federated Learning | NeurIPS | edge_case | krum, norm_bounding, rfa | -- |
-| 11 | `fung2020` | Fung et al. | The Limitations of Federated Learning in Sybil Settings (FoolsGold) | RAID | label_flip, backdoor | foolsgold | FoolsGold detects Sybil attacks via cosine similarity of historical gradients. Effective against coordinated label-flip but vulnerable to diverse a... |
-| 12 | `fang2020` | Fang et al. | Local Model Poisoning Attacks to Byzantine-Robust Federated Learning | USENIX Security | fang, alie | krum, bulyan, fedtrimmedavg (+1) | USENIX paper reports substantial error increases against four Byzantine-robust methods and finds generalized defenses insufficient in many evaluate... |
+| 8 | `bagdasaryan2020` | Bagdasaryan et al. | [How To Backdoor Federated Learning](https://arxiv.org/abs/1807.00459) | AISTATS | backdoor, constrain_and_scale | norm_bounding | Demonstrated that a single attacker in one round of FL can achieve 100% backdoor task accuracy via model replacement, greatly outperforming data poisoning. The constrain-and-scale technique evades ano... |
+| 9 | `dba2020` | Xie et al. | [DBA: Distributed Backdoor Attacks against Federated Learning](https://openreview.net/forum?id=rkgyS0VFvr) | ICLR | backdoor, dba | krum, norm_bounding, rfa | DBA decomposes a global backdoor trigger into separate local patterns assigned to different adversarial parties. Achieved significantly higher ASR than centralized backdoor attacks and evaded two robu... |
+| 10 | `wang2020` | Wang et al. | [Attack of the Tails: Yes, You Really Can Backdoor Federated Learning](https://arxiv.org/abs/2007.05084) | NeurIPS | backdoor, edge_case | krum, norm_bounding, rfa | Introduced edge-case backdoors that target inputs on the tail of the data distribution, which are unlikely to appear in training or test data. Proved theoretically that robustness to backdoors implies... |
+| 11 | `fung2020` | Fung et al. | [The Limitations of Federated Learning in Sybil Settings (FoolsGold)](https://www.usenix.org/conference/raid2020/presentation/fung) | RAID | label_flip, backdoor | foolsgold | FoolsGold detects Sybil attacks via cosine similarity of historical gradients. Effective against coordinated label-flip but vulnerable to diverse attack patterns. |
+| 12 | `fang2020` | Fang et al. | [Local Model Poisoning Attacks to Byzantine-Robust Federated Learning](https://arxiv.org/abs/1911.11815) | USENIX Security | fang, alie | krum, bulyan, fedtrimmedavg, fedmedian | USENIX paper reports substantial error increases against four Byzantine-robust methods and finds generalized defenses insufficient in many evaluated cases. |
 
 #### 2021 (3 papers)
 
 | # | Key | Authors | Title | Venue | Attacks Tested | Defenses Tested | Key Findings |
 |---|-----|---------|-------|-------|----------------|-----------------|--------------|
-| 13 | `karimireddy2021` | Karimireddy et al. | Learning from History for Byzantine Robust Optimization | ICML | alie, ipm, sign_flip | centered_clipping, krum, fedtrimmedavg (+2) | CenteredClipping uses coordinate-wise clipping around geometric median. Provably robust under heterogeneous data; outperforms Krum and trimmed mean... |
-| 14 | `cao2021` | Cao et al. | FLTrust: Byzantine-robust Federated Learning via Trust Bootstrapping | NDSS | fang, alie, label_flip (+3) | fltrust, krum, fedtrimmedavg (+1) | FLTrust uses a small server root dataset to compute trust scores via cosine similarity. |
-| 15 | `shejwalkar2021` | Shejwalkar & Houmansadr | Manipulating the Byzantine: Optimizing Model Poisoning Attacks and Defenses f... | NDSS | min_max, min_sum, fang (+2) | krum, bulyan, fedtrimmedavg (+2) | NDSS paper reports 1.5×–60× larger accuracy reductions than prior attacks and demonstrates substantial susceptibility of existing Byzantine-robust ... |
+| 13 | `karimireddy2021` | Karimireddy et al. | [Learning from History for Byzantine Robust Optimization](https://arxiv.org/abs/2012.10333) | ICML | alie, ipm, sign_flip | centered_clipping, krum, fedtrimmedavg, fedmedian, rfa | CenteredClipping uses coordinate-wise clipping around geometric median. Provably robust under heterogeneous data; outperforms Krum and trimmed mean on non-IID. |
+| 14 | `cao2021` | Cao et al. | [FLTrust: Byzantine-robust Federated Learning via Trust Bootstrapping](https://arxiv.org/abs/2012.13995) | NDSS | fang, alie, label_flip, sign_flip, gaussian_noise, backdoor | fltrust, krum, fedtrimmedavg, fedmedian | FLTrust uses a small server root dataset to compute trust scores via cosine similarity. Outperforms Krum, trimmed mean, and median across 6 attack types. |
+| 15 | `shejwalkar2021` | Shejwalkar & Houmansadr | [Manipulating the Byzantine: Optimizing Model Poisoning Attacks and Defenses f...](https://www.ndss-symposium.org/ndss-paper/manipulating-the-byzantine-optimizing-model-poisoning-attacks-and-defenses-for-federated-learning/) | NDSS | min_max, min_sum, fang, alie, label_flip | krum, bulyan, fedtrimmedavg, fedmedian, dnc | NDSS paper reports 1.5×–60× larger accuracy reductions than prior attacks and demonstrates substantial susceptibility of existing Byzantine-robust FL algorithms. |
 
 #### 2022 (14 papers)
 
 | # | Key | Authors | Title | Venue | Attacks Tested | Defenses Tested | Key Findings |
 |---|-----|---------|-------|-------|----------------|-----------------|--------------|
-| 16 | `more2022` | *(unverified)* | More is Better (Mostly): On the Backdoor Attacks in Federated Graph Neural Ne... | ACSAC | -- | -- | -- |
-| 17 | `eluding2022` | *(unverified)* | Eluding Secure Aggregation in Federated Learning via Model Inconsistency | CCS | -- | -- | Primary paper states the server can elude secure aggregation as if it were not in place, regardless of the underlying SA protocol. |
-| 18 | `mpaf2022` | Cao et al. | MPAF: Model Poisoning Attacks to Federated Learning Based on Fake Clients | CVPR Workshop | mpaf | krum, fedtrimmedavg, norm_bounding | -- |
-| 19 | `backdoor2022` | *(unverified)* | Backdoor Attacks in Federated Learning by Rare Embeddings and Gradient Ensemb... | EMNLP | -- | -- | -- |
-| 20 | `karimireddy2022` | Karimireddy et al. | Byzantine-Robust Learning on Heterogeneous Datasets via Bucketing | ICLR | alie, ipm, fang (+2) | krum, fedmedian, centered_clipping (+1) | Bucketing randomly groups clients before aggregation to reduce Byzantine influence under heterogeneous data. |
-| 21 | `farhadkhani2022` | Farhadkhani et al. | Byzantine Machine Learning Made Easy By Resilient Averaging of Momentums | ICML | alie, ipm, sign_flip (+1) | krum, fedtrimmedavg, fedmedian (+1) | Resilient Averaging of Momentums (RAM) combines momentum with robust aggregation. Achieves SOTA convergence under ALIE and IPM on heterogeneous data. |
-| 22 | `neurotoxin2022` | Zhang et al. | Neurotoxin: Durable Backdoors in Federated Learning | ICML | neurotoxin | krum, fedtrimmedavg, rfa (+2) | -- |
-| 23 | `signguard2022` | Xu & Huang | SignGuard: Byzantine-robust FL through Collaborative Malicious Gradient Filte... | IEEE ICDCS | fang, alie, min_max (+3) | signguard, fedtrimmedavg, fedmedian (+3) | SignGuard filters by gradient sign agreement and direction. Defends against ALIE, IPM, and min-max attacks that bypass Krum and Bulyan. |
-| 24 | `shejwalkar2022` | Shejwalkar et al. | Back to the Drawing Board: A Critical Evaluation of Poisoning Attacks on Prod... | IEEE S&P | min_max, min_sum, fang (+1) | krum, fedtrimmedavg, fedmedian (+2) | -- |
-| 25 | `pillutla2022` | Pillutla et al. | Robust Aggregation for Federated Learning | IEEE TSP | gaussian_noise, sign_flip, label_flip | rfa, fedtrimmedavg, krum | RFA (Robust Federated Averaging) uses approximate geometric median. Tolerates up to 50% Byzantine with convergence guarantees; tested on sign-flip ... |
-| 26 | `wan2022` | Wan et al. | Shielding FL: Robust Aggregation with Adaptive Client Selection (MAB-RFL) | IJCAI | byzantine | mab-rfl, krum, fedtrimmedavg | MAB-RFL uses multi-armed bandit to adaptively assign client reputation scores. Outperforms Krum and trimmed mean under Byzantine attacks with varyi... |
-| 27 | `fldetector2022` | Zhang et al. | FLDetector: Defending FL Against Model Poisoning via Detecting Malicious Clients | KDD | fang, alie, dba (+1) | fldetector, fedtrimmedavg, fedmedian (+1) | FLDetector predicts expected updates and flags deviations. Detects Fang, ALIE, and DBA attacks; outperforms trimmed mean and Krum on model poisoning. |
-| 28 | `deepsight2022` | Rieger et al. | DeepSight: Mitigating Backdoor Attacks in FL Through Deep Model Inspection | NDSS | backdoor, constrain_and_scale, dba | deepsight, foolsgold, krum (+1) | DeepSight inspects model weight distributions to detect backdoored updates. Detects constrain-and-scale and DBA attacks that bypass Krum and FoolsG... |
-| 29 | `flame2022` | Nguyen et al. | FLAME: Taming Backdoors in Federated Learning | USENIX Security | backdoor, constrain_and_scale, dba | flame, krum, foolsgold (+2) | FLAME combines cosine-similarity clustering with adaptive noise injection. Eliminates DBA backdoor while maintaining accuracy; outperforms Krum and... |
+| 16 | `more2022` | *(unverified)* | [More is Better (Mostly): On the Backdoor Attacks in Federated Graph Neural Ne...](https://arxiv.org/abs/2202.03195) | ACSAC | backdoor, dba | foolsgold | First study of backdoor attacks in Federated Graph Neural Networks (GNNs). Evaluates centralized backdoor attacks (CBA) and distributed backdoor attacks (DBA) on graph classification tasks (NCI1, PROT... |
+| 17 | `eluding2022` | *(unverified)* | [Eluding Secure Aggregation in Federated Learning via Model Inconsistency](https://arxiv.org/abs/2111.07380) | CCS | -- | -- | Primary paper states the server can elude secure aggregation as if it were not in place, regardless of the underlying SA protocol. |
+| 18 | `mpaf2022` | Cao et al. | [MPAF: Model Poisoning Attacks to Federated Learning Based on Fake Clients](https://arxiv.org/abs/2203.08669) | CVPR Workshop | mpaf | fedmedian, fedtrimmedavg, krum, norm_bounding | First model poisoning attack based on fake (injected) clients rather than compromised genuine clients. Drags the global model toward an attacker-chosen low-accuracy base model. On MNIST, Fashion-MNIST... |
+| 19 | `backdoor2022` | *(unverified)* | [Backdoor Attacks in Federated Learning by Rare Embeddings and Gradient Ensemb...](https://arxiv.org/abs/2204.14017) | EMNLP | backdoor, dba | fedmedian, krum, norm_bounding | Proposes rare-embedding backdoor poisoning with gradient ensembling for NLP federated learning. Less than 1% adversary clients suffice to inject backdoors on text classification with no drop in clean ... |
+| 20 | `karimireddy2022` | Karimireddy et al. | [Byzantine-Robust Learning on Heterogeneous Datasets via Bucketing](https://arxiv.org/abs/2006.09365) | ICLR | alie, ipm, fang, sign_flip, gaussian_noise | krum, fedmedian, centered_clipping, bulyan | Bucketing randomly groups clients before aggregation to reduce Byzantine influence under heterogeneous data. Achieves optimal rates with Krum/median + bucketing. |
+| 21 | `farhadkhani2022` | Farhadkhani et al. | [Byzantine Machine Learning Made Easy By Resilient Averaging of Momentums](https://arxiv.org/abs/2205.12173) | ICML | alie, ipm, sign_flip, label_flip | krum, fedtrimmedavg, fedmedian, centered_clipping | Resilient Averaging of Momentums (RAM) combines momentum with robust aggregation. Achieves SOTA convergence under ALIE and IPM on heterogeneous data. |
+| 22 | `neurotoxin2022` | Zhang et al. | [Neurotoxin: Durable Backdoors in Federated Learning](https://arxiv.org/abs/2206.10341) | ICML | backdoor, neurotoxin | krum, fedtrimmedavg, rfa, foolsgold, norm_bounding | Neurotoxin is a one-line modification to existing backdoor attacks that targets parameters changed less in magnitude during training. Doubled the durability (lifespan) of state-of-the-art backdoors ac... |
+| 23 | `signguard2022` | Xu & Huang | [SignGuard: Byzantine-robust FL through Collaborative Malicious Gradient Filte...](https://arxiv.org/abs/2109.05872) | IEEE ICDCS | fang, alie, min_max, min_sum, sign_flip, ipm | signguard, fedtrimmedavg, fedmedian, krum, bulyan, dnc | SignGuard filters by gradient sign agreement and direction. Defends against ALIE, IPM, and min-max attacks that bypass Krum and Bulyan. |
+| 24 | `shejwalkar2022` | Shejwalkar et al. | [Back to the Drawing Board: A Critical Evaluation of Poisoning Attacks on Prod...](https://arxiv.org/abs/2108.10241) | IEEE S&P | alie, fang, label_flip, min_max, min_sum | bulyan, dnc, fedmedian, fedtrimmedavg, krum, norm_bounding, rfa | Critical finding: contrary to established belief, FL is highly robust in practice even with simple low-cost defenses like norm bounding. Evaluated on FEMNIST, CIFAR-10, and Purchase datasets with up t... |
+| 25 | `pillutla2022` | Pillutla et al. | [Robust Aggregation for Federated Learning](https://arxiv.org/abs/1912.13445) | IEEE TSP | gaussian_noise, sign_flip, label_flip | rfa, fedtrimmedavg, krum | RFA (Robust Federated Averaging) uses approximate geometric median. Tolerates up to 50% Byzantine with convergence guarantees; tested on sign-flip and label-flip. |
+| 26 | `wan2022` | Wan et al. | [Shielding FL: Robust Aggregation with Adaptive Client Selection (MAB-RFL)](https://arxiv.org/abs/2204.13256) | IJCAI | byzantine | mab-rfl, krum, fedtrimmedavg | MAB-RFL uses multi-armed bandit to adaptively assign client reputation scores. Outperforms Krum and trimmed mean under Byzantine attacks with varying fractions. |
+| 27 | `fldetector2022` | Zhang et al. | [FLDetector: Defending FL Against Model Poisoning via Detecting Malicious Clients](https://arxiv.org/abs/2207.09209) | KDD | fang, alie, dba, backdoor | fldetector, fedtrimmedavg, fedmedian, krum | FLDetector predicts expected updates and flags deviations. Detects Fang, ALIE, and DBA attacks; outperforms trimmed mean and Krum on model poisoning. |
+| 28 | `deepsight2022` | Rieger et al. | [DeepSight: Mitigating Backdoor Attacks in FL Through Deep Model Inspection](https://arxiv.org/abs/2201.00763) | NDSS | backdoor, constrain_and_scale, dba | deepsight, foolsgold, krum, norm_bounding | DeepSight inspects model weight distributions to detect backdoored updates. Detects constrain-and-scale and DBA attacks that bypass Krum and FoolsGold. |
+| 29 | `flame2022` | Nguyen et al. | [FLAME: Taming Backdoors in Federated Learning](https://arxiv.org/abs/2101.02281) | USENIX Security | backdoor, constrain_and_scale, dba | flame, krum, foolsgold, rfa, norm_bounding | FLAME combines cosine-similarity clustering with adaptive noise injection. Eliminates DBA backdoor while maintaining accuracy; outperforms Krum and FoolsGold. |
 
 #### 2023 (19 papers)
 
 | # | Key | Authors | Title | Venue | Attacks Tested | Defenses Tested | Key Findings |
 |---|-----|---------|-------|-------|----------------|-----------------|--------------|
-| 30 | `poisoning2023` | *(unverified)* | Poisoning with Cerberus: Stealthy and Colluded Backdoor Attack against Federa... | AAAI | -- | -- | -- |
-| 31 | `untargeted2023` | *(unverified)* | Untargeted Attack against Federated Recommendation Systems via Poisonous Item... | AAAI | -- | -- | -- |
-| 32 | `vuln_backdoor_defenses2023` | various | On the Vulnerability of Backdoor Defenses for Federated Learning | AAAI | backdoor | krum, foolsgold, flame (+1) | AAAI abstract explicitly frames the work as circumventing existing backdoor defenses. |
-| 33 | `mesas2023` | Krauss & Dmitrienko | MESAS: Poisoning Defense for FL Resilient against Adaptive Attackers | ACM CCS | backdoor, constrain_and_scale, dba (+1) | mesas, foolsgold, krum (+4) | MESAS specifically targets adaptive attackers. Shows existing defenses fail against attackers that adapt; proposes moving-target defense strategy. |
-| 34 | `characterizing2023` | *(unverified)* | Characterizing Internal Evasion Attacks in Federated Learning | AISTATS | -- | -- | PMLR abstract reports only limited improvement from federated adversarial training against internal evasion; personalization + adversarial training... |
-| 35 | `unraveling2023` | *(unverified)* | Unraveling the Connections between Privacy and Certified Robustness in Federa... | CCS | -- | -- | -- |
-| 36 | `chameleon2023` | Dai et al. | Chameleon: Adapting to Peer Images for Planting Durable Backdoors in Federate... | ICML | backdoor | krum, foolsgold, norm_bounding (+1) | -- |
-| 37 | `liu2023gradsplit` | Liu et al. | Byzantine-Robust Learning on Heterogeneous Data via Gradient Splitting | ICML | alie, ipm, sign_flip | krum, fedtrimmedavg, fedmedian (+1) | Gradient splitting separates updates into magnitude and direction components. Provably robust under heterogeneous data; breaks ALIE and IPM assumpt... |
-| 38 | `3dfed2023` | Lyu et al. | 3DFed: Adaptive and Extensible Framework for Covert Backdoor Attack in Federa... | IEEE S&P | 3dfed | deepsight, foolsgold, flame (+1) | Primary publication description reports evasion of multiple named defenses. |
-| 39 | `fedrecover2023` | Cao et al. | FedRecover: Recovering from Poisoning Attacks in FL | IEEE S&P | fang, alie, dba (+1) | fedrecover, fedtrimmedavg, fedmedian | FedRecover identifies and removes poisoned model updates post-hoc. Recovers model accuracy after training-time poisoning without retraining from sc... |
-| 40 | `denialofservice2023` | *(unverified)* | Denial-of-Service or Fine-Grained Control: Towards Flexible Model Poisoning A... | IJCAI | -- | -- | -- |
-| 41 | `oblivion2023` | various | OBLIVION: Poisoning Federated Learning by Inducing Catastrophic Forgetting | INFOCOM | oblivion | krum, fedtrimmedavg | -- |
-| 42 | `jmlr_attacks2023` | Moshawrab et al. | Attacks against Federated Learning Defense Systems and their Mitigation | JMLR | on_off_attack, label_flip | foolsgold, krum, fedtrimmedavg | JMLR abstract reports the attacks effectively deceive well-known FL defense systems; the paper then proposes Viceroy as mitigation. |
-| 43 | `chen2023` | Chen et al. | FLRAM: Robust Aggregation for Defense against Byzantine Poisoning in FL | MDPI Electronics | gaussian_noise, sign_flip, label_flip | flram, krum, fedtrimmedavg (+1) | FLRAM scores clients on norm, direction, and sign agreement. Outperforms Krum and trimmed mean under Gaussian noise, sign-flip, and label-flip atta... |
-| 44 | `a3fl2023` | Zhang et al. | A3FL: Adversarially Adaptive Backdoor Attacks to Federated Learning | NeurIPS | a3fl | krum, foolsgold, flame (+3) | NeurIPS abstract states evaluation against 12 existing defenses and stronger/persistent attack behavior. |
-| 45 | `iba2023` | various | IBA: Towards Irreversible Backdoor Attacks in Federated Learning | NeurIPS | backdoor | krum, fedtrimmedavg, norm_bounding (+1) | -- |
-| 46 | `backdoor2023` | *(unverified)* | Backdoor Threats from Compromised Foundation Models to Federated Learning | NeurIPS workshop | -- | -- | -- |
-| 47 | `gradient2023` | *(unverified)* | Gradient Obfuscation Gives a False Sense of Security in Federated Learning | USENIX Security | -- | -- | USENIX abstract concludes common gradient post-processing defenses can provide a false sense of security against reconstruction. |
-| 48 | `mozaffari2023` | Mozaffari et al. | Every Vote Counts: Ranking-Based Training of FL (FRL) | USENIX Security | min_max, min_sum, fang (+1) | krum, fedtrimmedavg | FRL ranks clients by loss improvement on validation set. Outperforms Krum and trimmed mean under min-max and ALIE attacks with up to 40% malicious. |
+| 30 | `poisoning2023` | *(unverified)* | [Poisoning with Cerberus: Stealthy and Colluded Backdoor Attack against Federa...](https://ojs.aaai.org/index.php/AAAI/article/view/26083) | AAAI | alie, backdoor, dba | bulyan, dnc, fedmedian, fedtrimmedavg, fltrust, foolsgold, krum, rfa | CerP (Cerberus Poisoning) is a colluded distributed backdoor attack that jointly tunes triggers and controls poisoned model changes across malicious participants. Evaluated against 13 defense methods:... |
+| 31 | `untargeted2023` | *(unverified)* | [Untargeted Attack against Federated Recommendation Systems via Poisonous Item...](https://arxiv.org/abs/2212.05399) | AAAI | alie, fang, gaussian_noise, label_flip | fedtrimmedavg, krum, norm_bounding | Proposes ClusterAttack (untargeted poisoning that converges item embeddings into dense clusters disrupting ranking) and UNION defense (uniformity-based contrastive learning + malicious gradient filter... |
+| 32 | `vuln_backdoor_defenses2023` | various | [On the Vulnerability of Backdoor Defenses for Federated Learning](https://arxiv.org/abs/2301.08170) | AAAI | backdoor | krum, foolsgold, flame, deepsight | AAAI abstract explicitly frames the work as circumventing existing backdoor defenses. |
+| 33 | `mesas2023` | Krauss & Dmitrienko | [MESAS: Poisoning Defense for FL Resilient against Adaptive Attackers](https://dl.acm.org/doi/10.1145/3576915.3623212) | ACM CCS | backdoor, constrain_and_scale, dba, edge_case | mesas, foolsgold, krum, norm_bounding, flame, deepsight, fltrust | MESAS specifically targets adaptive attackers. Shows existing defenses fail against attackers that adapt; proposes moving-target defense strategy. |
+| 34 | `characterizing2023` | *(unverified)* | [Characterizing Internal Evasion Attacks in Federated Learning](https://arxiv.org/abs/2209.08412) | AISTATS | -- | -- | PMLR abstract reports only limited improvement from federated adversarial training against internal evasion; personalization + adversarial training improves relative robustness. |
+| 35 | `unraveling2023` | *(unverified)* | [Unraveling the Connections between Privacy and Certified Robustness in Federa...](https://arxiv.org/abs/2209.04030) | CCS | backdoor, dba, label_flip, min_max, min_sum | bulyan, fedmedian, fedtrimmedavg, krum, norm_bounding, rfa | Establishes theoretical connections between differential privacy and certified robustness in FL against poisoning attacks. Proposes UserDP-FedAvg and InsDP-FedAvg with two certification criteria (cert... |
+| 36 | `chameleon2023` | Dai et al. | [Chameleon: Adapting to Peer Images for Planting Durable Backdoors in Federate...](https://arxiv.org/abs/2304.12961) | ICML | backdoor, neurotoxin | krum, foolsgold, norm_bounding, flame | Chameleon uses contrastive learning to amplify relationships between poisoned images and peer images (interferers and facilitators) for more durable backdoors. Extends backdoor lifespan by 1.2x-4x ove... |
+| 37 | `liu2023gradsplit` | Liu et al. | [Byzantine-Robust Learning on Heterogeneous Data via Gradient Splitting](https://arxiv.org/abs/2302.06079) | ICML | alie, ipm, sign_flip | krum, fedtrimmedavg, fedmedian, centered_clipping | Gradient splitting separates updates into magnitude and direction components. Provably robust under heterogeneous data; breaks ALIE and IPM assumptions. |
+| 38 | `3dfed2023` | Lyu et al. | [3DFed: Adaptive and Extensible Framework for Covert Backdoor Attack in Federa...](https://arxiv.org/abs/2308.04466) | IEEE S&P | 3dfed | deepsight, foolsgold, flame, fldetector | Primary publication description reports evasion of multiple named defenses. |
+| 39 | `fedrecover2023` | Cao et al. | [FedRecover: Recovering from Poisoning Attacks in FL](https://arxiv.org/abs/2210.10936) | IEEE S&P | fang, alie, dba, backdoor | fedrecover, fedtrimmedavg, fedmedian | FedRecover identifies and removes poisoned model updates post-hoc. Recovers model accuracy after training-time poisoning without retraining from scratch. |
+| 40 | `denialofservice2023` | *(unverified)* | [Denial-of-Service or Fine-Grained Control: Towards Flexible Model Poisoning A...](https://arxiv.org/abs/2304.10783) | IJCAI | alie, fang, ipm, min_max, min_sum, mpaf | bulyan, centered_clipping, dnc, fedmedian, fedtrimmedavg, krum, norm_bounding | FMPA (Flexible Model Poisoning Attack) supports both denial-of-service and fine-grained accuracy control goals without knowing the defense or benign clients' updates. Compared against 6 attacks (AGRT/... |
+| 41 | `oblivion2023` | various | [OBLIVION: Poisoning Federated Learning by Inducing Catastrophic Forgetting](https://ieeexplore.ieee.org/document/10228981) | INFOCOM | oblivion | krum, fedtrimmedavg | Proposed OBLIVION, a model poisoning attack exploiting catastrophic forgetting to destroy the global model's memory. Uses weight prioritization (targeting weights with most influence on accuracy) and ... |
+| 42 | `jmlr_attacks2023` | Moshawrab et al. | [Attacks against Federated Learning Defense Systems and their Mitigation](https://www.jmlr.org/papers/v24/22-0014.html) | JMLR | on_off_attack, label_flip | foolsgold, krum, fedtrimmedavg | JMLR abstract reports the attacks effectively deceive well-known FL defense systems; the paper then proposes Viceroy as mitigation. |
+| 43 | `chen2023` | Chen et al. | [FLRAM: Robust Aggregation for Defense against Byzantine Poisoning in FL](https://www.mdpi.com/2079-9292/12/21/4463) | MDPI Electronics | gaussian_noise, sign_flip, label_flip | flram, krum, fedtrimmedavg, fedmedian | FLRAM scores clients on norm, direction, and sign agreement. Outperforms Krum and trimmed mean under Gaussian noise, sign-flip, and label-flip attacks. |
+| 44 | `a3fl2023` | Zhang et al. | [A3FL: Adversarially Adaptive Backdoor Attacks to Federated Learning](https://proceedings.neurips.cc/paper_files/paper/2023/hash/c07d71ff0bc042e4b9acd626a79597fa-Abstract-Conference.html) | NeurIPS | a3fl | krum, foolsgold, flame, deepsight, fldetector, norm_bounding | NeurIPS abstract states evaluation against 12 existing defenses and stronger/persistent attack behavior. |
+| 45 | `iba2023` | various | [IBA: Towards Irreversible Backdoor Attacks in Federated Learning](https://proceedings.neurips.cc/paper_files/paper/2023/hash/d0c6bc641a56bebee9d985b937307367-Abstract-Conference.html) | NeurIPS | backdoor, dba | fedtrimmedavg, flame, foolsgold, krum, norm_bounding, rfa | IBA jointly learns optimal visually stealthy triggers and gradually implants backdoors using selective parameter poisoning and constrained updates. On CIFAR-10 with FedAvg: 87.13% BA while maintaining... |
+| 46 | `backdoor2023` | *(unverified)* | [Backdoor Threats from Compromised Foundation Models to Federated Learning](https://arxiv.org/abs/2311.00144) | NeurIPS workshop | backdoor | -- | Proposes BD-FMFL, a backdoor attack exploiting compromised foundation models (FMs) as initialization for FL, requiring no attacker participation during FL training. Compared against attack-free FL (AF... |
+| 47 | `gradient2023` | *(unverified)* | [Gradient Obfuscation Gives a False Sense of Security in Federated Learning](https://arxiv.org/abs/2206.04055) | USENIX Security | -- | -- | USENIX abstract concludes common gradient post-processing defenses can provide a false sense of security against reconstruction. |
+| 48 | `mozaffari2023` | Mozaffari et al. | [Every Vote Counts: Ranking-Based Training of FL (FRL)](https://www.usenix.org/conference/usenixsecurity23/presentation/mozaffari) | USENIX Security | min_max, min_sum, fang, alie | krum, fedtrimmedavg | FRL ranks clients by loss improvement on validation set. Outperforms Krum and trimmed mean under min-max and ALIE attacks with up to 40% malicious. |
 
 #### 2024 (24 papers)
 
 | # | Key | Authors | Title | Venue | Attacks Tested | Defenses Tested | Key Findings |
 |---|-----|---------|-------|-------|----------------|-----------------|--------------|
-| 49 | `beyond2024` | *(unverified)* | Beyond Traditional Threats: A Persistent Backdoor Attack on Federated Learning | AAAI | -- | -- | -- |
-| 50 | `brdfl2024` | Fang et al. | Byzantine-Robust Decentralized FL | ACM CCS | fang, min_max, alie (+1) | brdfl, centered_clipping, dnc | Byzantine-robust decentralized FL without server. Achieves convergence under 1/3 Byzantine with gossip-based robust aggregation. |
-| 51 | `boba2024` | various | BOBA: Byzantine-Robust FL with Label Skewness | AISTATS | byzantine | boba | BOBA addresses label-skewed non-IID settings where honest clients look Byzantine. Outperforms Krum and trimmed mean under severe label imbalance. |
-| 52 | `distributed2024` | *(unverified)* | Distributed Backdoor Attacks on Federated Graph Learning and Certified Defenses | CCS | backdoor | -- | -- |
-| 53 | `fake2024` | *(unverified)* | Fake Node-Based Perception Poisoning Attacks against Federated Object Detecti... | DAC | -- | -- | -- |
-| 54 | `backdoor2024` | *(unverified)* | Backdoor Federated Learning by Poisoning Backdoor-Critical Layers | ICLR | backdoor | -- | -- |
-| 55 | `like2024` | *(unverified)* | Like Oil and Water: Group Robustness Methods and Poisoning Defenses Don't Mix | ICLR | -- | -- | ICLR abstract reports poison ASR increasing from 0% to >97% in some group-robust settings and defense-induced harm to legitimate minority samples. |
-| 56 | `hidra2024` | Choudhary et al. | Attacking Byzantine Robust Aggregation in High Dimensions | IEEE S&P | hidra | chunked_defenses | HIDRA shows high-dimensional robust aggregation fails when dimension >> clients. Proposes dimensionality-aware robust aggregation. |
-| 57 | `layerdba2024` | Dai et al. | LayerDBA: Circumventing Similarity-Based Defenses in Federated Learning | IEEE S&P | layerdba | foolsgold | Primary research page reports circumvention of FoolsGold and Contra, including high ASR with only 5% malicious clients. |
-| 58 | `blades2024` | Li et al. | Blades: A Unified Benchmark Suite for Byzantine Attacks and Defenses in FL | IEEE/ACM IoTDI | gaussian_noise, label_flip, sign_flip (+4) | krum, fedtrimmedavg, fedmedian (+2) | Unified benchmark of 6 attacks × 8 defenses across CIFAR-10/MNIST. Confirms ALIE and min-max bypass Krum; FLTrust most robust overall. |
-| 59 | `badfss2024` | *(unverified)* | BADFSS: Backdoor Attacks on Federated Self-Supervised Learning | IJCAI | -- | -- | -- |
-| 60 | `darkfed2024` | *(unverified)* | DarkFed: A Data-Free Backdoor Attack in Federated Learning | IJCAI | -- | -- | IJCAI abstract motivates DarkFed by showing prior attacks become stoppable under realistic settings and develops a data-free covert alternative tha... |
-| 61 | `eabfl2024` | *(unverified)* | EAB-FL: Exacerbating Algorithmic Bias through Model Poisoning Attacks in Fede... | IJCAI | -- | -- | -- |
-| 62 | `badsampler2024` | Liu et al. | BadSampler: Clean-Label Backdoor Attacks against FLTrust | KDD | backdoor | fltrust | BadSampler attacks FLTrust by manipulating the root dataset sampling. Achieves high backdoor ASR even with FLTrust by exploiting root data distribu... |
-| 63 | `badsampler2024_2` | *(unverified)* | *BadSampler:* Harnessing the Power of Catastrophic Forgetting to Poison Byzan... | KDD | -- | -- | Primary preprint presents BadSampler specifically as poisoning Byzantine-robust FL while avoiding classic malicious-update signatures. |
-| 64 | `fedsecurity2024` | Han et al. | FedSecurity: Benchmarking Attacks and Defenses in FL and Federated LLMs | KDD | byzantine, label_flip, backdoor (+1) | foolsgold, krum, bulyan (+5) | Benchmarks attacks and defenses in both FL and federated LLM fine-tuning. Shows LLM FL is more vulnerable to backdoor attacks than vision FL. |
-| 65 | `navigation2024` | *(unverified)* | Navigation as Attackers Wish? Towards Building Robust Embodied Agents under F... | NAACL | -- | -- | -- |
-| 66 | `autoadapt2024` | various | Automatic Adversarial Adaption for Stealthy Poisoning Attacks in Federated Le... | NDSS | autoadapt | krum, fedtrimmedavg, fedmedian (+1) | NDSS abstract frames a unified strong adaptive attacker specifically designed to challenge multiple defense metrics simultaneously. |
-| 67 | `freqfed2024` | Fereidooni et al. | FreqFed: Frequency Analysis-Based Approach for Mitigating Poisoning | NDSS | label_flip, backdoor, constrain_and_scale (+1) | freqfed, krum, fedmedian (+3) | FreqFed analyzes model updates in the frequency domain. Detects backdoor patterns invisible in weight space; outperforms FLAME and DeepSight. |
-| 68 | `rflpa2024` | various | RFLPA: A Robust FL Framework against Poisoning Attacks | NeurIPS | fang, min_max, min_sum (+2) | rflpa, krum, fedtrimmedavg (+2) | RFLPA combines reputation scoring with adaptive penalty. Outperforms FLTrust and MAB-RFL under multi-round persistent attacks. |
-| 69 | `badvfl2024` | *(unverified)* | BadVFL: Backdoor Attacks in Vertical Federated Learning | S&P | -- | -- | -- |
-| 70 | `revisit2024` | *(unverified)* | Revisit Targeted Model Poisoning on Federated Recommendation: Optimize via Mu... | SIGIR | -- | -- | -- |
-| 71 | `ace2024` | *(unverified)* | ACE: A Model Poisoning Attack on Contribution Evaluation Methods in Federated... | USENIX Security | -- | -- | USENIX abstract reports deception of five SOTA contribution-evaluation methods and finds six explored countermeasures inadequate. |
-| 72 | `lurking2024` | *(unverified)* | Lurking in the shadows: Unveiling Stealthy Backdoor Attacks against Personali... | USENIX Security | -- | -- | -- |
+| 49 | `beyond2024` | *(unverified)* | [Beyond Traditional Threats: A Persistent Backdoor Attack on Federated Learning](https://arxiv.org/abs/2404.17617) | AAAI | backdoor, dba | -- | Proposes FCBA (Full Combination Backdoor Attack) for persistent backdoors in FL. On GTSRB post-attack 120 rounds: FCBA achieves 57.78% ASR vs DBA's 0.95% (+56.83pp). On MNIST: FCBA 99.52% vs DBA 64.64... |
+| 50 | `brdfl2024` | Fang et al. | [Byzantine-Robust Decentralized FL](https://arxiv.org/abs/2406.10416) | ACM CCS | fang, min_max, alie, ipm | brdfl, centered_clipping, dnc | Byzantine-robust decentralized FL without server. Achieves convergence under 1/3 Byzantine with gossip-based robust aggregation. |
+| 51 | `boba2024` | various | [BOBA: Byzantine-Robust FL with Label Skewness](https://arxiv.org/abs/2208.12932) | AISTATS | byzantine | boba | BOBA addresses label-skewed non-IID settings where honest clients look Byzantine. Outperforms Krum and trimmed mean under severe label imbalance. |
+| 52 | `distributed2024` | *(unverified)* | [Distributed Backdoor Attacks on Federated Graph Learning and Certified Defenses](https://arxiv.org/abs/2407.08935) | CCS | backdoor, dba | -- | Proposes Opt-GDBA for distributed backdoor attacks on federated graph learning with adaptive trigger generation. Achieves >90% backdoor accuracy across 6 graph datasets (BITCOIN 0.99, MUTAG 0.95, PROT... |
+| 53 | `fake2024` | *(unverified)* | [Fake Node-Based Perception Poisoning Attacks against Federated Object Detecti...](https://dl.acm.org/doi/10.1145/3649329.3655934) | DAC | -- | -- | Proposes FNPPA, a fake-node-based perception poisoning attack against federated object detection in mobile computing that poisons local data and injects fake nodes to overwrite clean updates, achievin... |
+| 54 | `backdoor2024` | *(unverified)* | [Backdoor Federated Learning by Poisoning Backdoor-Critical Layers](https://arxiv.org/abs/2308.04466) | ICLR | 3dfed, backdoor, constrain_and_scale, dba | flame, fldetector, fltrust, krum | Proposes BC (Backdoor-Critical) layer-aware backdoor attacks that identify and target only the small subset of layers dominating model vulnerabilities. Successfully backdoors FL under seven defenses (... |
+| 55 | `like2024` | *(unverified)* | [Like Oil and Water: Group Robustness Methods and Poisoning Defenses Don't Mix](https://arxiv.org/abs/2504.02142) | ICLR | backdoor, label_flip | fedmedian, fedtrimmedavg | ICLR abstract reports poison ASR increasing from 0% to >97% in some group-robust settings and defense-induced harm to legitimate minority samples. |
+| 56 | `hidra2024` | Choudhary et al. | [Attacking Byzantine Robust Aggregation in High Dimensions](https://arxiv.org/abs/2312.14461) | IEEE S&P | hidra | chunked_defenses | HIDRA shows high-dimensional robust aggregation fails when dimension >> clients. Proposes dimensionality-aware robust aggregation. |
+| 57 | `layerdba2024` | Dai et al. | [LayerDBA: Circumventing Similarity-Based Defenses in Federated Learning](https://ieeexplore.ieee.org/document/10795458) | IEEE S&P | layerdba | foolsgold | Primary research page reports circumvention of FoolsGold and Contra, including high ASR with only 5% malicious clients. |
+| 58 | `blades2024` | Li et al. | [Blades: A Unified Benchmark Suite for Byzantine Attacks and Defenses in FL](https://arxiv.org/abs/2206.05359) | IEEE/ACM IoTDI | gaussian_noise, label_flip, sign_flip, alie, ipm, fang, min_max | krum, fedtrimmedavg, fedmedian, dnc, fltrust | Unified benchmark of 6 attacks × 8 defenses across CIFAR-10/MNIST. Confirms ALIE and min-max bypass Krum; FLTrust most robust overall. |
+| 59 | `badfss2024` | *(unverified)* | [BADFSS: Backdoor Attacks on Federated Self-Supervised Learning](https://www.ijcai.org/proceedings/2024/61) | IJCAI | backdoor | -- | BADFSS proposes a backdoor attack against federated self-supervised learning (FSSL) using supervised contrastive learning and attention alignment. Compared against 4 centralized SSL backdoor baselines... |
+| 60 | `darkfed2024` | *(unverified)* | [DarkFed: A Data-Free Backdoor Attack in Federated Learning](https://arxiv.org/abs/2405.03299) | IJCAI | 3dfed, backdoor | flame, foolsgold, norm_bounding | IJCAI abstract motivates DarkFed by showing prior attacks become stoppable under realistic settings and develops a data-free covert alternative that evades defenses. |
+| 61 | `eabfl2024` | *(unverified)* | [EAB-FL: Exacerbating Algorithmic Bias through Model Poisoning Attacks in Fede...](https://arxiv.org/abs/2410.02042) | IJCAI | -- | krum | EAB-FL is a model poisoning attack targeting group fairness (not accuracy) in FL. Tested on CelebA, Adult Income, and UTK Faces. Under FedAvg, EAB-FL achieves EOD up to 0.45 and DPD up to 0.50 while m... |
+| 62 | `badsampler2024` | Liu et al. | [BadSampler: Clean-Label Backdoor Attacks against FLTrust](https://arxiv.org/abs/2406.12222) | KDD | backdoor | fltrust | BadSampler attacks FLTrust by manipulating the root dataset sampling. Achieves high backdoor ASR even with FLTrust by exploiting root data distribution. |
+| 63 | `badsampler2024_2` | *(unverified)* | [*BadSampler:* Harnessing the Power of Catastrophic Forgetting to Poison Byzan...](https://arxiv.org/abs/2406.12222) | KDD | label_flip | fedtrimmedavg, fldetector, fltrust, foolsgold, krum | Primary preprint presents BadSampler specifically as poisoning Byzantine-robust FL while avoiding classic malicious-update signatures. |
+| 64 | `fedsecurity2024` | Han et al. | [FedSecurity: Benchmarking Attacks and Defenses in FL and Federated LLMs](https://arxiv.org/abs/2306.04959) | KDD | byzantine, label_flip, backdoor, edge_case | foolsgold, krum, bulyan, fedtrimmedavg, fedmedian, rfa, norm_bounding, centered_clipping | Benchmarks attacks and defenses in both FL and federated LLM fine-tuning. Shows LLM FL is more vulnerable to backdoor attacks than vision FL. |
+| 65 | `navigation2024` | *(unverified)* | [Navigation as Attackers Wish? Towards Building Robust Embodied Agents under F...](https://arxiv.org/abs/2211.14769) | NAACL | backdoor, dba | bulyan, fedmedian, fedtrimmedavg, fltrust, krum | Proposes NAW (Navigation As Wish) backdoor attack on federated vision-and-language navigation agents, and PBA (Prompt-Based Aggregation) defense. On R2R dataset, NAW achieves 0.68-0.85 ASR under FedAv... |
+| 66 | `autoadapt2024` | various | [Automatic Adversarial Adaption for Stealthy Poisoning Attacks in Federated Le...](https://www.ndss-symposium.org/ndss-paper/automatic-adversarial-adaption-for-stealthy-poisoning-attacks-in-federated-learning/) | NDSS | autoadapt | krum, fedtrimmedavg, fedmedian, norm_bounding | NDSS abstract frames a unified strong adaptive attacker specifically designed to challenge multiple defense metrics simultaneously. |
+| 67 | `freqfed2024` | Fereidooni et al. | [FreqFed: Frequency Analysis-Based Approach for Mitigating Poisoning](https://arxiv.org/abs/2312.04432) | NDSS | label_flip, backdoor, constrain_and_scale, dba | freqfed, krum, fedmedian, foolsgold, flame, deepsight | FreqFed analyzes model updates in the frequency domain. Detects backdoor patterns invisible in weight space; outperforms FLAME and DeepSight. |
+| 68 | `rflpa2024` | various | [RFLPA: A Robust FL Framework against Poisoning Attacks](https://arxiv.org/abs/2405.15182) | NeurIPS | fang, min_max, min_sum, alie, ipm | rflpa, krum, fedtrimmedavg, bulyan, fltrust | RFLPA combines reputation scoring with adaptive penalty. Outperforms FLTrust and MAB-RFL under multi-round persistent attacks. |
+| 69 | `badvfl2024` | *(unverified)* | [BadVFL: Backdoor Attacks in Vertical Federated Learning](https://arxiv.org/abs/2304.08847) | S&P | backdoor | -- | Proposes BadVFL, first clean-label backdoor attack in Vertical FL exploiting feature embeddings. On CIFAR-10 (2-party): ASR 0.85, MTA 0.77. On CIFAR-100: ASR 0.78, MTA 0.70. Tested countermeasures: Ne... |
+| 70 | `revisit2024` | *(unverified)* | [Revisit Targeted Model Poisoning on Federated Recommendation: Optimize via Mu...](https://dl.acm.org/doi/10.1145/3626772.3657764) | SIGIR | -- | -- | Proposes HMTA (Heterogeneous Multi-target Transfer Attack), a two-stage targeted model poisoning framework for federated recommendation that uses collaboration-aware manifold learning and optimal mult... |
+| 71 | `ace2024` | *(unverified)* | [ACE: A Model Poisoning Attack on Contribution Evaluation Methods in Federated...](https://arxiv.org/abs/2405.20975) | USENIX Security | -- | fedtrimmedavg, foolsgold, krum | USENIX abstract reports deception of five SOTA contribution-evaluation methods and finds six explored countermeasures inadequate. |
+| 72 | `lurking2024` | *(unverified)* | [Lurking in the shadows: Unveiling Stealthy Backdoor Attacks against Personali...](https://arxiv.org/abs/2406.06207) | USENIX Security | backdoor, neurotoxin | dnc, fedtrimmedavg, flame, fltrust, krum | PFedBA is a backdoor attack against personalized FL that aligns backdoor and main learning tasks via trigger optimization with gradient and loss alignment. Tested across 10 PFL algorithms (FedAvg-FT, ... |
 
 #### 2025 (20 papers)
 
 | # | Key | Authors | Title | Venue | Attacks Tested | Defenses Tested | Key Findings |
 |---|-----|---------|-------|-------|----------------|-----------------|--------------|
-| 73 | `labelfree2025` | Wei Shen; Wenke Huang; Guancheng Wan; Mang Ye | Label-Free Backdoor Attacks in Vertical Federated Learning | AAAI | -- | -- | -- |
-| 74 | `rethinking2025` | *(unverified)* | Rethinking Byzantine Robustness in Federated Recommendation from Sparse Aggre... | AAAI | -- | -- | AAAI abstract reports the attack family can break down defenses with a small number of malicious clients. |
-| 75 | `sadba2025` | Jun Feng; Yuzhe Lai; Hong Sun; Bocheng Ren | SADBA: Self-Adaptive Distributed Backdoor Attack Against Federated Learning | AAAI | backdoor, fang | -- | Primary AAAI abstract reports SADBA achieves higher or comparable backdoor performance and main-task accuracy across various datasets with limited ... |
-| 76 | `strike2025` | various | Exploit Gradient Skewness to Circumvent Byzantine Defenses for Federated Lear... | AAAI | strike | krum, fedtrimmedavg, fedmedian (+1) | AAAI/Sony primary descriptions state that STRIKE deceives existing Byzantine defenses by exploiting gradient skewness. |
-| 77 | `hyperparameters2025` | Simon Lachnit; Ghassan Karame | On Hyperparameters and Backdoor-Resistance in Horizontal Federated Learning | CCS | -- | -- | Reports that proper benign hyperparameter tuning can reduce the 50%-lifespan of A3FL by 98.6% without a defense, with a 2.9 percentage-point clean-... |
-| 78 | `infighting2025` | Ye Li; Yanchao Zhao; Chengcheng Zhu; Jiale Zhang | Infighting in the Dark: Multi-Label Backdoor Attack in Federated Learning | CVPR | backdoor | -- | Primary CVPR abstract reports average ASR >97% and >90% ASR after 900 rounds while bypassing existing defenses. |
-| 79 | `model2025` | Yueqi Xie; Minghong Fang; Neil Zhenqiang Gong | Model Poisoning Attacks to Federated Learning via Multi-Round Consistency | CVPR | poisonedfl | -- | Primary CVPR paper reports PoisonedFL breaks 8 SOTA defenses and outperforms 7 existing model-poisoning attacks on 5 benchmark datasets. |
-| 80 | `poisonedfl2025` | Xie et al. | Model Poisoning Attacks to FL via Multi-Round Consistency | CVPR | poisonedfl, fang, alie (+2) | krum, fedmedian, fedtrimmedavg (+3) | PoisonedFL exploits multi-round consistency to bypass FLTrust and FoolsGold. Gradually shifts model over multiple rounds to evade per-round detection. |
-| 81 | `badpfl2025` | Mingyuan Fan; Zhanyi Hu; Fuyi Wang; Cen Chen | Bad-PFL: Exploiting Backdoor Attacks against Personalized Federated Learning | ICLR | backdoor | -- | Primary ICLR abstract reports superior attack performance across 3 benchmark datasets and multiple PFL methods, including methods equipped with SOT... |
-| 82 | `backdoor2025` | Jirui Yang; Peng Chen; Zhihui Lu; Jianping Zeng; Qiang Duan; Xin Du; Ruijun Deng | Backdoor Attack on Vertical Federated Graph Neural Network Learning | IJCAI | backdoor | -- | Primary IJCAI abstract reports nearly 100% ASR across 3 datasets and 3 GNN models with minimal main-task impact, remaining effective under evaluate... |
-| 83 | `performance2025` | *(unverified)* | Performance Guaranteed Poisoning Attacks in Federated Learning: A Sliding Mod... | IJCAI | -- | -- | -- |
-| 84 | `foundationfl2025` | Fang et al. | Do We Really Need to Design New Byzantine-robust Aggregation Rules? | NDSS | fang, min_max, min_sum (+1) | foundationfl, krum, foolsgold (+3) | Questions necessity of complex aggregation rules; shows simple defenses with proper hyperparameters match or exceed Krum, Bulyan, and FLTrust. |
-| 85 | `practical2025` | *(unverified)* | Practical Poisoning Attacks with Limited Byzantine Clients in Clustered Feder... | S&P | -- | -- | -- |
-| 86 | `poisafl2025` | various | PoiSAFL: Scalable Poisoning Attack Framework to Byzantine-resilient Semi-asyn... | USENIX Security | poisafl | krum, fedtrimmedavg, fedmedian | USENIX abstract states PoiSAFL bypasses three typical categories of Byzantine-resilient defenses. |
-| 87 | `lasa2025` | Xu et al. | Achieving Byzantine-Resilient FL via Layer-Adaptive Sparsified Model Aggregation | WACV | gaussian_noise, sign_flip, min_max (+2) | lasa, fedtrimmedavg, rfa (+4) | Layer-adaptive sparsification aggregates only important parameters per layer. Robust to model poisoning while preserving accuracy under non-IID. |
-| 88 | `nigdba2025` | *(unverified)* | NI-GDBA: Non-Intrusive Distributed Backdoor Attack Based on Adaptive Perturba... | WWW | -- | -- | -- |
-| 89 | `backfed2025` | Dao et al. | BackFed: An Efficient & Standardized Benchmark Suite for Backdoor Attacks in FL | arXiv | neurotoxin, backdoor, dba (+1) | fedtrimmedavg, krum, rfa (+5) | Standardized backdoor benchmark for FL. Shows constrain-and-scale and DBA bypass most defenses; only FLAME and frequency-based methods partially su... |
-| 90 | `byzfl2025` | Garcia et al. | ByzFL: Research Framework for Robust Federated Learning | arXiv | sign_flip, label_flip, ipm (+1) | krum, fedtrimmedavg, fedmedian (+2) | ByzFL framework for systematic evaluation of Byzantine-robust FL. Reproduces and compares 8 defenses under standardized conditions. |
-| 91 | `flpoison2025` | Zhang et al. | SoK: Benchmarking Poisoning Attacks and Defenses in Federated Learning | arXiv | gaussian_noise, sign_flip, alie (+11) | krum, bulyan, fedtrimmedavg (+10) | SoK benchmarking 12 attacks × 10 defenses on 4 datasets. Finds no single defense robust to all attacks; ALIE and adaptive attacks most effective ov... |
-| 92 | `stealthy2025` | Qingqian Yang; Peishen Yan; Xiaoyu Wu; Jiaru Zhang; Tao Song; Yang Hua; Hao Wang; Liangliang Wang; Haibing Guan | Stealthy Backdoor Attack in Federated Learning via Adaptive Layer-Wise Gradie... | iccv | backdoor | -- | Primary ICCV abstract reports bypass of 8 SOTA defenses and improvement over existing attacks by up to 54.76%. |
+| 73 | `labelfree2025` | Wei Shen; Wenke Huang; Guancheng Wan; Mang Ye | [Label-Free Backdoor Attacks in Vertical Federated Learning](https://ojs.aaai.org/index.php/AAAI/article/view/34246) | AAAI | backdoor | -- | Proposes Label-Free Backdoor Attacks (LFBA) for vertical federated learning, removing the assumption that attackers need task label information. Key insight: gradients of local embeddings reflect sema... |
+| 74 | `rethinking2025` | *(unverified)* | [Rethinking Byzantine Robustness in Federated Recommendation from Sparse Aggre...](https://arxiv.org/abs/2501.03301) | AAAI | alie, fang, gaussian_noise, label_flip | fedmedian, fedtrimmedavg, krum, norm_bounding | AAAI abstract reports the attack family can break down defenses with a small number of malicious clients. |
+| 75 | `sadba2025` | Jun Feng; Yuzhe Lai; Hong Sun; Bocheng Ren | [SADBA: Self-Adaptive Distributed Backdoor Attack Against Federated Learning](https://ojs.aaai.org/index.php/AAAI/article/view/33820) | AAAI | backdoor, dba, fang | -- | Primary AAAI abstract reports SADBA achieves higher or comparable backdoor performance and main-task accuracy across various datasets with limited malicious-client percentage. |
+| 76 | `strike2025` | various | [Exploit Gradient Skewness to Circumvent Byzantine Defenses for Federated Lear...](https://arxiv.org/abs/2502.04890) | AAAI | strike | krum, fedtrimmedavg, fedmedian, bulyan | AAAI/Sony primary descriptions state that STRIKE deceives existing Byzantine defenses by exploiting gradient skewness. |
+| 77 | `hyperparameters2025` | Simon Lachnit; Ghassan Karame | [On Hyperparameters and Backdoor-Resistance in Horizontal Federated Learning](https://dl.acm.org/doi/10.1145/3719027.3765211) | CCS | a3fl, backdoor | -- | Reports that proper benign hyperparameter tuning can reduce the 50%-lifespan of A3FL by 98.6% without a defense, with a 2.9 percentage-point clean-accuracy drop. |
+| 78 | `infighting2025` | Ye Li; Yanchao Zhao; Chengcheng Zhu; Jiale Zhang | [Infighting in the Dark: Multi-Label Backdoor Attack in Federated Learning](https://arxiv.org/abs/2409.19601) | CVPR | a3fl, backdoor, neurotoxin | deepsight, flame, foolsgold, krum | Primary CVPR abstract reports average ASR >97% and >90% ASR after 900 rounds while bypassing existing defenses. |
+| 79 | `model2025` | Yueqi Xie; Minghong Fang; Neil Zhenqiang Gong | [Model Poisoning Attacks to Federated Learning via Multi-Round Consistency](https://arxiv.org/abs/2404.15611) | CVPR | alie, fang, min_max, min_sum, mpaf, poisonedfl | fedmedian, fedtrimmedavg, flame, fldetector, fltrust, krum, norm_bounding | Primary CVPR paper reports PoisonedFL breaks 8 SOTA defenses and outperforms 7 existing model-poisoning attacks on 5 benchmark datasets. |
+| 80 | `poisonedfl2025` | Xie et al. | [Model Poisoning Attacks to FL via Multi-Round Consistency](https://arxiv.org/abs/2404.15611) | CVPR | poisonedfl, fang, alie, min_max, min_sum | krum, fedmedian, fedtrimmedavg, fltrust, flame, fldetector | PoisonedFL exploits multi-round consistency to bypass FLTrust and FoolsGold. Gradually shifts model over multiple rounds to evade per-round detection. |
+| 81 | `badpfl2025` | Mingyuan Fan; Zhanyi Hu; Fuyi Wang; Cen Chen | [Bad-PFL: Exploiting Backdoor Attacks against Personalized Federated Learning](https://arxiv.org/abs/2501.12736) | ICLR | backdoor, dba, neurotoxin | fedmedian, krum, norm_bounding | Primary ICLR abstract reports superior attack performance across 3 benchmark datasets and multiple PFL methods, including methods equipped with SOTA defenses. |
+| 82 | `backdoor2025` | Jirui Yang; Peng Chen; Zhihui Lu; Jianping Zeng; Qiang Duan; Xin Du; Ruijun Deng | [Backdoor Attack on Vertical Federated Graph Neural Network Learning](https://arxiv.org/abs/2410.11290) | IJCAI | backdoor | -- | Primary IJCAI abstract reports nearly 100% ASR across 3 datasets and 3 GNN models with minimal main-task impact, remaining effective under evaluated defenses. |
+| 83 | `performance2025` | *(unverified)* | [Performance Guaranteed Poisoning Attacks in Federated Learning: A Sliding Mod...](https://arxiv.org/abs/2505.16403) | IJCAI | alie, min_max, min_sum | bulyan, centered_clipping, dnc, fedmedian, fedtrimmedavg, fltrust, krum, norm_bounding | Proposes FedSA using sliding mode control theory for precise model poisoning. Can degrade global accuracy to any predefined target level with average deviation of 1.62-2.64%. Tested against 9 defenses... |
+| 84 | `foundationfl2025` | Fang et al. | [Do We Really Need to Design New Byzantine-robust Aggregation Rules?](https://arxiv.org/abs/2501.17381) | NDSS | fang, min_max, min_sum, alie | foundationfl, krum, foolsgold, flame, fedtrimmedavg, fedmedian | Questions necessity of complex aggregation rules; shows simple defenses with proper hyperparameters match or exceed Krum, Bulyan, and FLTrust. |
+| 85 | `practical2025` | *(unverified)* | [Practical Poisoning Attacks with Limited Byzantine Clients in Clustered Feder...](https://ieeexplore.ieee.org/document/11023464/) | S&P | -- | -- | Proposes Cluster-U-M and Cluster-U-D attacks targeting Clustered Federated Learning (CFL). Attacks work via cluster poisoning and client-drift exploitation within clusters. Can compromise up to 54% of... |
+| 86 | `poisafl2025` | various | [PoiSAFL: Scalable Poisoning Attack Framework to Byzantine-resilient Semi-asyn...](https://www.usenix.org/conference/usenixsecurity25/presentation/pang-xiaoyi) | USENIX Security | poisafl | krum, fedtrimmedavg, fedmedian | USENIX abstract states PoiSAFL bypasses three typical categories of Byzantine-resilient defenses. |
+| 87 | `lasa2025` | Xu et al. | [Achieving Byzantine-Resilient FL via Layer-Adaptive Sparsified Model Aggregation](https://arxiv.org/abs/2409.01435) | WACV | gaussian_noise, sign_flip, min_max, min_sum, alie | lasa, fedtrimmedavg, rfa, krum, bulyan, dnc, signguard | Layer-adaptive sparsification aggregates only important parameters per layer. Robust to model poisoning while preserving accuracy under non-IID. |
+| 88 | `nigdba2025` | *(unverified)* | [NI-GDBA: Non-Intrusive Distributed Backdoor Attack Based on Adaptive Perturba...](https://dl.acm.org/doi/10.1145/3696410.3714630) | WWW | backdoor, dba | -- | Proposes NI-GDBA, a non-intrusive distributed backdoor attack on federated graph learning using adaptive perturbation trigger generators for each malicious client. Does not require intrusive trigger e... |
+| 89 | `backfed2025` | Dao et al. | [BackFed: An Efficient & Standardized Benchmark Suite for Backdoor Attacks in FL](https://arxiv.org/abs/2507.04903) | arXiv | neurotoxin, backdoor, dba, edge_case | fedtrimmedavg, krum, rfa, fltrust, foolsgold, deepsight, flame, fldetector | Standardized backdoor benchmark for FL. Shows constrain-and-scale and DBA bypass most defenses; only FLAME and frequency-based methods partially succeed. |
+| 90 | `byzfl2025` | Garcia et al. | [ByzFL: Research Framework for Robust Federated Learning](https://arxiv.org/abs/2505.24802) | arXiv | sign_flip, label_flip, ipm, alie | krum, fedtrimmedavg, fedmedian, rfa, centered_clipping | ByzFL framework for systematic evaluation of Byzantine-robust FL. Reproduces and compares 8 defenses under standardized conditions. |
+| 91 | `flpoison2025` | Zhang et al. | [SoK: Benchmarking Poisoning Attacks and Defenses in Federated Learning](https://arxiv.org/abs/2502.03801) | arXiv | gaussian_noise, sign_flip, alie, ipm, fang, min_max, min_sum, mimic, label_flip, backdoor, dba, edge_case, neurotoxin, constrain_and_scale | krum, bulyan, fedtrimmedavg, fedmedian, rfa, fltrust, centered_clipping, dnc, signguard, foolsgold, norm_bounding, deepsight, flame | SoK benchmarking 12 attacks × 10 defenses on 4 datasets. Finds no single defense robust to all attacks; ALIE and adaptive attacks most effective overall. |
+| 92 | `stealthy2025` | Qingqian Yang; Peishen Yan; Xiaoyu Wu; Jiaru Zhang; Tao Song; Yang Hua; Hao Wang; Liangliang Wang; Haibing Guan | [Stealthy Backdoor Attack in Federated Learning via Adaptive Layer-Wise Gradie...](https://ieeexplore.ieee.org/document/11444883) | iccv | backdoor, dba | deepsight, dnc, flame, fltrust, krum | Primary ICCV abstract reports bypass of 8 SOTA defenses and improvement over existing attacks by up to 54.76%. |
 
 #### 2026 (4 papers)
 
 | # | Key | Authors | Title | Venue | Attacks Tested | Defenses Tested | Key Findings |
 |---|-----|---------|-------|-------|----------------|-----------------|--------------|
-| 93 | `breaking2026` | Jarin Tasneem | Breaking Cross-View Associations: Byzantine Model Poisoning Attack against Ve... | AAAI | -- | -- | -- |
-| 94 | `goodgradients2026` | various | Good Gradients Poison Your Model: Evading Defenses in Federated Learning via ... | AAAI | good_gradients | fltrust, krum, fedtrimmedavg (+1) | Primary abstract describes evasion across mainstream defensive mechanisms by crafting seemingly benign malicious gradients. |
-| 95 | `pill2026` | various | Poisoning with a Pill: Circumventing Detection in Federated Learning | AAAI | pill | krum, fedtrimmedavg, fedmedian (+5) | AAAI abstract reports bypassing 8 SOTA defenses, up to 7× error-rate increase and >2× average increase, across IID/non-IID and cross-silo/cross-dev... |
-| 96 | `dynamic2026` | *(unverified)* | Dynamic Min-Max Multi-Dimensional Reinforcement Backdoor Attacks and Orchestr... | WWW | -- | -- | -- |
+| 93 | `breaking2026` | Jarin Tasneem | [Breaking Cross-View Associations: Byzantine Model Poisoning Attack against Ve...](https://ojs.aaai.org/index.php/AAAI/article/view/42327) | AAAI | -- | -- | A 3-page AAAI-26 Undergraduate Consortium position paper on Byzantine model poisoning in vertical federated learning (VFL). Demonstrates that a single malicious participant can significantly reduce in... |
+| 94 | `goodgradients2026` | various | [Good Gradients Poison Your Model: Evading Defenses in Federated Learning via ...](https://ojs.aaai.org/index.php/AAAI/article/view/38328) | AAAI | good_gradients | fltrust, krum, fedtrimmedavg, norm_bounding | Primary abstract describes evasion across mainstream defensive mechanisms by crafting seemingly benign malicious gradients. |
+| 95 | `pill2026` | various | [Poisoning with a Pill: Circumventing Detection in Federated Learning](https://arxiv.org/abs/2407.15389) | AAAI | pill | krum, fedtrimmedavg, fedmedian, bulyan, fltrust, foolsgold, norm_bounding, dnc | AAAI abstract reports bypassing 8 SOTA defenses, up to 7× error-rate increase and >2× average increase, across IID/non-IID and cross-silo/cross-device settings. |
+| 96 | `dynamic2026` | *(unverified)* | [Dynamic Min-Max Multi-Dimensional Reinforcement Backdoor Attacks and Orchestr...](https://dl.acm.org/doi/10.1145/3774904.3792994) | WWW | backdoor | -- | Proposes CLARF for fairness-aware federated fraud detection with a dynamic Min-Max adversarial game framework. Attackers use hybrid multi-stage reinforcement learning with multi-dimensional rewards to... |
 
 ### 8.2 Out-of-Scope Papers: Privacy, Inference, Other FL Security (109 papers)
 
@@ -746,155 +746,155 @@ These papers cover FL security topics outside Byzantine robustness (gradient inv
 
 | # | Key | Authors | Title | Venue | Key Findings |
 |---|-----|---------|-------|-------|--------------|
-| 97 | `deep2017` | *(unverified)* | Deep Models Under the GAN: Information Leakage from Collaborative Deep Learning | CCS | -- |
+| 97 | `deep2017` | *(unverified)* | [Deep Models Under the GAN: Information Leakage from Collaborative Deep Learning](https://arxiv.org/abs/1702.07464) | CCS | -- |
 
 #### 2019 (3 papers)
 
 | # | Key | Authors | Title | Venue | Key Findings |
 |---|-----|---------|-------|-------|--------------|
-| 98 | `beyond2019` | *(unverified)* | Beyond Inferring Class Representatives: User-Level Privacy Leakage From Feder... | INFOCOM | -- |
-| 99 | `comprehensive2019` | *(unverified)* | Comprehensive Privacy Analysis of Deep Learning: Passive and Active White-box... | S&P | -- |
-| 100 | `exploiting2019` | *(unverified)* | Exploiting Unintended Feature Leakage in Collaborative Learning | S&P | -- |
+| 98 | `beyond2019` | *(unverified)* | [Beyond Inferring Class Representatives: User-Level Privacy Leakage From Feder...](https://dl.acm.org/doi/10.1109/INFOCOM.2019.8737416) | INFOCOM | -- |
+| 99 | `comprehensive2019` | *(unverified)* | [Comprehensive Privacy Analysis of Deep Learning: Passive and Active White-box...](https://arxiv.org/abs/1812.00910) | S&P | -- |
+| 100 | `exploiting2019` | *(unverified)* | [Exploiting Unintended Feature Leakage in Collaborative Learning](https://arxiv.org/abs/1805.04049) | S&P | -- |
 
 #### 2020 (1 papers)
 
 | # | Key | Authors | Title | Venue | Key Findings |
 |---|-----|---------|-------|-------|--------------|
-| 101 | `inverting2020` | *(unverified)* | Inverting Gradients - How easy is it to break privacy in federated learning? | NeurIPS | -- |
+| 101 | `inverting2020` | *(unverified)* | [Inverting Gradients - How easy is it to break privacy in federated learning?](https://arxiv.org/abs/2003.14053) | NeurIPS | -- |
 
 #### 2021 (6 papers)
 
 | # | Key | Authors | Title | Venue | Key Findings |
 |---|-----|---------|-------|-------|--------------|
-| 102 | `freerider2021` | *(unverified)* | Free-rider Attacks on Model Aggregation in Federated Learning | AISTATS | -- |
-| 103 | `feature2021` | *(unverified)* | Feature Inference Attack on Model Predictions in Vertical Federated Learning | ICDE | -- |
-| 104 | `gradient2021` | *(unverified)* | Gradient Disaggregation: Breaking Privacy in Federated Learning by Reconstruc... | ICML | -- |
-| 105 | `cafe2021` | *(unverified)* | CAFE: Catastrophic Data Leakage in Vertical Federated Learning | NeurIPS | -- |
-| 106 | `evaluating2021` | *(unverified)* | Evaluating Gradient Inversion Attacks and Defenses in Federated Learning | NeurIPS | -- |
-| 107 | `gradient2021_2` | *(unverified)* | Gradient Inversion with Generative Image Prior | NeurIPS | -- |
+| 102 | `freerider2021` | *(unverified)* | [Free-rider Attacks on Model Aggregation in Federated Learning](https://proceedings.mlr.press/v130/fraboni21a.html) | AISTATS | -- |
+| 103 | `feature2021` | *(unverified)* | [Feature Inference Attack on Model Predictions in Vertical Federated Learning](https://arxiv.org/abs/2010.10152) | ICDE | -- |
+| 104 | `gradient2021` | *(unverified)* | [Gradient Disaggregation: Breaking Privacy in Federated Learning by Reconstruc...](https://arxiv.org/abs/2106.06089) | ICML | -- |
+| 105 | `cafe2021` | *(unverified)* | [CAFE: Catastrophic Data Leakage in Vertical Federated Learning](https://arxiv.org/abs/2110.15122) | NeurIPS | -- |
+| 106 | `evaluating2021` | *(unverified)* | [Evaluating Gradient Inversion Attacks and Defenses in Federated Learning](https://arxiv.org/abs/2112.00059) | NeurIPS | -- |
+| 107 | `gradient2021_2` | *(unverified)* | [Gradient Inversion with Generative Image Prior](https://arxiv.org/abs/2110.14962) | NeurIPS | -- |
 
 #### 2022 (11 papers)
 
 | # | Key | Authors | Title | Venue | Key Findings |
 |---|-----|---------|-------|-------|--------------|
-| 108 | `auditing2022` | *(unverified)* | Auditing Privacy Defenses in Federated Learning via Generative Gradient Leakage | CVPR | CVPR abstract reports leakage despite commonly used additive-noise and compression defenses. |
-| 109 | `gradvit2022` | *(unverified)* | GradViT: Gradient Inversion of Vision Transformers | CVPR | -- |
-| 110 | `fedrecattack2022` | *(unverified)* | FedRecAttack: Model Poisoning Attack to Federated Recommendation | ICDE | -- |
-| 111 | `bayesian2022` | *(unverified)* | Bayesian Framework for Gradient Leakage | ICLR | -- |
-| 112 | `robbing2022` | *(unverified)* | Robbing the Fed: Directly Obtaining Private Data in Federated Learning with M... | ICLR | -- |
-| 113 | `poisoning2022` | *(unverified)* | Poisoning Deep Learning Based Recommender Model in Federated Learning Scenarios | IJCAI | -- |
-| 114 | `survey2022` | *(unverified)* | A Survey on Gradient Inversion: Attacks, Defenses and Future Directions | IJCAI | -- |
-| 115 | `fedattack2022` | *(unverified)* | FedAttack: Effective and Covert Poisoning Attack on Federated Recommendation ... | KDD | -- |
-| 116 | `learning2022` | *(unverified)* | Learning to Attack Federated Learning: A Model-based Reinforcement Learning A... | NeurIPS | -- |
-| 117 | `label2022` | *(unverified)* | Label Inference Attacks Against Vertical Federated Learning | USENIX Security | -- |
-| 118 | `pipattack2022` | *(unverified)* | PipAttack: Poisoning Federated Recommender Systems for Manipulating Item Prom... | WSDM | -- |
+| 108 | `auditing2022` | *(unverified)* | [Auditing Privacy Defenses in Federated Learning via Generative Gradient Leakage](https://arxiv.org/abs/2203.15696) | CVPR | CVPR abstract reports leakage despite commonly used additive-noise and compression defenses. |
+| 109 | `gradvit2022` | *(unverified)* | [GradViT: Gradient Inversion of Vision Transformers](https://arxiv.org/abs/2203.11894) | CVPR | -- |
+| 110 | `fedrecattack2022` | *(unverified)* | [FedRecAttack: Model Poisoning Attack to Federated Recommendation](https://arxiv.org/abs/2204.01499) | ICDE | -- |
+| 111 | `bayesian2022` | *(unverified)* | [Bayesian Framework for Gradient Leakage](https://arxiv.org/abs/2111.04706) | ICLR | -- |
+| 112 | `robbing2022` | *(unverified)* | [Robbing the Fed: Directly Obtaining Private Data in Federated Learning with M...](https://arxiv.org/abs/2110.13057) | ICLR | -- |
+| 113 | `poisoning2022` | *(unverified)* | [Poisoning Deep Learning Based Recommender Model in Federated Learning Scenarios](https://arxiv.org/abs/2204.13594) | IJCAI | -- |
+| 114 | `survey2022` | *(unverified)* | [A Survey on Gradient Inversion: Attacks, Defenses and Future Directions](https://arxiv.org/abs/2206.07284) | IJCAI | -- |
+| 115 | `fedattack2022` | *(unverified)* | [FedAttack: Effective and Covert Poisoning Attack on Federated Recommendation ...](https://arxiv.org/abs/2202.04975) | KDD | -- |
+| 116 | `learning2022` | *(unverified)* | [Learning to Attack Federated Learning: A Model-based Reinforcement Learning A...](https://proceedings.neurips.cc/paper_files/paper/2022/hash/e2ef0cae667dbe9bfdbcaed1bd91807b-Abstract-Conference.html) | NeurIPS | -- |
+| 117 | `label2022` | *(unverified)* | [Label Inference Attacks Against Vertical Federated Learning](https://www.usenix.org/conference/usenixsecurity22/presentation/fu-chong) | USENIX Security | -- |
+| 118 | `pipattack2022` | *(unverified)* | [PipAttack: Poisoning Federated Recommender Systems for Manipulating Item Prom...](https://arxiv.org/abs/2110.10926) | WSDM | -- |
 
 #### 2023 (27 papers)
 
 | # | Key | Authors | Title | Venue | Key Findings |
 |---|-----|---------|-------|-------|--------------|
-| 119 | `mgia2023` | *(unverified)* | MGIA: Mutual Gradient Inversion Attack in Multi-Modal Federated Learning (Stu... | AAAI | -- |
-| 120 | `active2023` | *(unverified)* | Active Membership Inference Attack under Local Differential Privacy in Federa... | AISTATS | PMLR abstract reports very high attack success under rigorous LDP; noise sufficient to suppress the attack significantly degrades utility. |
-| 121 | `explaining2023` | *(unverified)* | Explaining predictions and attacks in federated learning via random forests | Appl. Intell. | -- |
-| 122 | `turning2023` | *(unverified)* | Turning Privacy-preserving Mechanisms against Federated Learning | CCS | Primary TU Delft description reports deception of SOTA defenses, ~60% performance detriment in adversarial mode, and effective backdoors in 93% of ... |
-| 123 | `resource2023` | *(unverified)* | The Resource Problem of Using Linear Layer Leakage Attack in Federated Learning | CVPR | -- |
-| 124 | `generative2023` | *(unverified)* | Generative Gradient Inversion via Over-Parameterized Networks in Federated Le... | ICCV | -- |
-| 125 | `gifd2023` | *(unverified)* | GIFD: A Generative Gradient Inversion Method with Feature Domain Optimization | ICCV | -- |
-| 126 | `federated2023` | *(unverified)* | Federated IoT Interaction Vulnerability Analysis | ICDE | -- |
-| 127 | `decepticons2023` | *(unverified)* | Decepticons: Corrupted Transformers Breach Privacy in Federated Learning for ... | ICLR | -- |
-| 128 | `effective2023` | *(unverified)* | Effective passive membership inference attacks in federated learning against ... | ICLR | -- |
-| 129 | `instancewise2023` | *(unverified)* | Instance-wise Batch Label Restoration via Gradients in Federated Learning | ICLR | -- |
-| 130 | `cocktail2023` | *(unverified)* | Cocktail Party Attack: Breaking Aggregation-Based Privacy in Federated Learni... | ICML | PMLR abstract reports recovery from aggregated gradients at large batch sizes, including up to 1024. |
-| 131 | `sratta2023` | *(unverified)* | SRATTA: Sample Re-ATTribution Attack of Secure Aggregation in Federated Learning | ICML | PMLR abstract states the attack effectively breaks the privacy offered by secure aggregation through sample re-attribution. |
-| 132 | `surrogate2023` | *(unverified)* | Surrogate Model Extension (SME): A Fast and Accurate Weight Update Attack on ... | ICML | -- |
-| 133 | `tableak2023` | *(unverified)* | TabLeak: Tabular Data Leakage in Federated Learning | ICML | -- |
-| 134 | `graphfraudster2023` | *(unverified)* | Graph-Fraudster: Adversarial Attacks on Graph Neural Network Based Vertical F... | IEEE Trans. Comput. Soc. Syst. | -- |
-| 135 | `uafedrec2023` | *(unverified)* | UA-FedRec: Untargeted Attack on Federated News Recommendation | KDD | -- |
-| 136 | `ppa2023` | *(unverified)* | PPA: Preference Profiling Attack Against Federated Learning | NDSS | -- |
-| 137 | `understanding2023` | *(unverified)* | Understanding Deep Gradient Leakage via Inversion Influence Functions | NeurIPS | -- |
-| 138 | `absolute2023` | *(unverified)* | Absolute Variation Distance: an Inversion Attack Evaluation Metric for Federa... | NeurIPS workshop | -- |
-| 139 | `beyond2023` | *(unverified)* | Beyond Gradient and Priors in Privacy Attacks: Leveraging Pooler Layer Inputs... | NeurIPS workshop | -- |
-| 140 | `exploring2023` | *(unverified)* | Exploring User-level Gradient Inversion with a Diffusion Prior | NeurIPS workshop | -- |
-| 141 | `user2023` | *(unverified)* | User Inference Attacks on Large Language Models | NeurIPS workshop | -- |
-| 142 | `manipulating2023` | *(unverified)* | Manipulating Federated Recommender Systems: Poisoning with Synthetic Users an... | SIGIR | -- |
-| 143 | `learning2023` | *(unverified)* | Learning To Invert: Simple Adaptive Attacks for Gradient Inversion in Federat... | UAI | -- |
-| 144 | `agrevader2023` | *(unverified)* | AgrEvader: Poisoning Membership Inference against Byzantine-robust Federated ... | WWW | Primary institutional abstract reports coordinate-wise averaging defenses fail against PMIA and AgrEvader circumvents detection; reported attack ac... |
-| 145 | `interactionlevel2023` | *(unverified)* | Interaction-level Membership Inference Attack Against Federated Recommender S... | WWW | -- |
+| 119 | `mgia2023` | *(unverified)* | [MGIA: Mutual Gradient Inversion Attack in Multi-Modal Federated Learning (Stu...](https://ojs.aaai.org/index.php/AAAI/article/view/26995) | AAAI | -- |
+| 120 | `active2023` | *(unverified)* | [Active Membership Inference Attack under Local Differential Privacy in Federa...](https://arxiv.org/abs/2302.12685) | AISTATS | PMLR abstract reports very high attack success under rigorous LDP; noise sufficient to suppress the attack significantly degrades utility. |
+| 121 | `explaining2023` | *(unverified)* | [Explaining predictions and attacks in federated learning via random forests](https://doi.org/10.1007/s10489-022-03435-1) | Appl. Intell. | -- |
+| 122 | `turning2023` | *(unverified)* | [Turning Privacy-preserving Mechanisms against Federated Learning](https://arxiv.org/abs/2305.05355) | CCS | Primary TU Delft description reports deception of SOTA defenses, ~60% performance detriment in adversarial mode, and effective backdoors in 93% of ... |
+| 123 | `resource2023` | *(unverified)* | [The Resource Problem of Using Linear Layer Leakage Attack in Federated Learning](https://arxiv.org/abs/2303.14868) | CVPR | -- |
+| 124 | `generative2023` | *(unverified)* | [Generative Gradient Inversion via Over-Parameterized Networks in Federated Le...](https://openaccess.thecvf.com/content/ICCV2023/html/Zhang_Generative_Gradient_Inversion_via_Over-Parameterized_Networks_in_Federated_Learning_ICCV_2023_paper.html) | ICCV | -- |
+| 125 | `gifd2023` | *(unverified)* | [GIFD: A Generative Gradient Inversion Method with Feature Domain Optimization](https://arxiv.org/abs/2308.04699) | ICCV | -- |
+| 126 | `federated2023` | *(unverified)* | [Federated IoT Interaction Vulnerability Analysis](https://ieeexplore.ieee.org/document/10184681) | ICDE | -- |
+| 127 | `decepticons2023` | *(unverified)* | [Decepticons: Corrupted Transformers Breach Privacy in Federated Learning for ...](https://arxiv.org/abs/2201.12675) | ICLR | -- |
+| 128 | `effective2023` | *(unverified)* | [Effective passive membership inference attacks in federated learning against ...](https://openreview.net/forum?id=QsCSLPP55Ku) | ICLR | -- |
+| 129 | `instancewise2023` | *(unverified)* | [Instance-wise Batch Label Restoration via Gradients in Federated Learning](https://openreview.net/forum?id=FIrQfNSOoTr) | ICLR | -- |
+| 130 | `cocktail2023` | *(unverified)* | [Cocktail Party Attack: Breaking Aggregation-Based Privacy in Federated Learni...](https://proceedings.mlr.press/v202/kariyappa23a.html) | ICML | PMLR abstract reports recovery from aggregated gradients at large batch sizes, including up to 1024. |
+| 131 | `sratta2023` | *(unverified)* | [SRATTA: Sample Re-ATTribution Attack of Secure Aggregation in Federated Learning](https://arxiv.org/abs/2306.07644) | ICML | PMLR abstract states the attack effectively breaks the privacy offered by secure aggregation through sample re-attribution. |
+| 132 | `surrogate2023` | *(unverified)* | [Surrogate Model Extension (SME): A Fast and Accurate Weight Update Attack on ...](https://arxiv.org/abs/2306.00127) | ICML | -- |
+| 133 | `tableak2023` | *(unverified)* | [TabLeak: Tabular Data Leakage in Federated Learning](https://arxiv.org/abs/2210.01785) | ICML | -- |
+| 134 | `graphfraudster2023` | *(unverified)* | [Graph-Fraudster: Adversarial Attacks on Graph Neural Network Based Vertical F...](https://arxiv.org/abs/2110.06468) | IEEE Trans. Comput. Soc. Syst. | -- |
+| 135 | `uafedrec2023` | *(unverified)* | [UA-FedRec: Untargeted Attack on Federated News Recommendation](https://arxiv.org/abs/2202.06701) | KDD | -- |
+| 136 | `ppa2023` | *(unverified)* | [PPA: Preference Profiling Attack Against Federated Learning](https://arxiv.org/abs/2202.04856) | NDSS | -- |
+| 137 | `understanding2023` | *(unverified)* | [Understanding Deep Gradient Leakage via Inversion Influence Functions](https://arxiv.org/abs/2309.13016) | NeurIPS | -- |
+| 138 | `absolute2023` | *(unverified)* | [Absolute Variation Distance: an Inversion Attack Evaluation Metric for Federa...](https://openreview.net/pdf?id=OoEIUohfcp) | NeurIPS workshop | -- |
+| 139 | `beyond2023` | *(unverified)* | [Beyond Gradient and Priors in Privacy Attacks: Leveraging Pooler Layer Inputs...](https://arxiv.org/abs/2312.05720) | NeurIPS workshop | -- |
+| 140 | `exploring2023` | *(unverified)* | [Exploring User-level Gradient Inversion with a Diffusion Prior](https://arxiv.org/abs/2409.07291) | NeurIPS workshop | -- |
+| 141 | `user2023` | *(unverified)* | [User Inference Attacks on Large Language Models](https://arxiv.org/abs/2310.09266) | NeurIPS workshop | -- |
+| 142 | `manipulating2023` | *(unverified)* | [Manipulating Federated Recommender Systems: Poisoning with Synthetic Users an...](https://arxiv.org/abs/2304.03054) | SIGIR | -- |
+| 143 | `learning2023` | *(unverified)* | [Learning To Invert: Simple Adaptive Attacks for Gradient Inversion in Federat...](https://arxiv.org/abs/2210.10880) | UAI | -- |
+| 144 | `agrevader2023` | *(unverified)* | [AgrEvader: Poisoning Membership Inference against Byzantine-robust Federated ...](https://dl.acm.org/doi/10.1145/3543507.3583542) | WWW | Primary institutional abstract reports coordinate-wise averaging defenses fail against PMIA and AgrEvader circumvents detection; reported attack ac... |
+| 145 | `interactionlevel2023` | *(unverified)* | [Interaction-level Membership Inference Attack Against Federated Recommender S...](https://arxiv.org/abs/2301.10964) | WWW | -- |
 
 #### 2024 (25 papers)
 
 | # | Key | Authors | Title | Venue | Key Findings |
 |---|-----|---------|-------|-------|--------------|
-| 146 | `adversarial2024` | *(unverified)* | Adversarial Attacks on Federated-Learned Adaptive Bitrate Algorithms | AAAI | -- |
-| 147 | `foreseeing2024` | *(unverified)* | Foreseeing Reconstruction Quality of Gradient Inversion: An Optimization Pers... | AAAI | -- |
-| 148 | `highfidelity2024` | *(unverified)* | High-Fidelity Gradient Inversion in Distributed Learning | AAAI | -- |
-| 149 | `analysis2024` | *(unverified)* | Analysis of Privacy Leakage in Federated Large Language Models | AISTATS | -- |
-| 150 | `not2024` | *(unverified)* | Not One Less: Exploring Interplay between User Profiles and Items in Untarget... | CCS | -- |
-| 151 | `uncovering2024` | *(unverified)* | Uncovering Gradient Inversion Risks in Practical Language Model Training | CCS | -- |
-| 152 | `leak2024` | *(unverified)* | Leak and Learn: An Attacker's Cookbook to Train Using Leaked Data from Federa... | CVPR | -- |
-| 153 | `the2024` | *(unverified)* | On the Efficiency of Privacy Attacks in Federated Learning | CVPR workshop | -- |
-| 154 | `fedinverse2024` | *(unverified)* | FedInverse: Evaluating Privacy Leakage in Federated Learning | ICLR | -- |
-| 155 | `hiding2024` | *(unverified)* | Hiding in Plain Sight: Disguising Data Stealing Attacks in Federated Learning | ICLR | ICLR abstract reports data stealing for batch sizes up to 512 and under secure aggregation while meeting stated detectability requirements. |
-| 156 | `towards2024` | *(unverified)* | Towards Eliminating Hard Label Constraints in Gradient Inversion Attacks | ICLR | -- |
-| 157 | `breaking2024` | *(unverified)* | Breaking Secure Aggregation: Label Leakage from Aggregated Gradients in Feder... | INFOCOM | Primary preprint abstract reports bypassing secure aggregation and 100% label recovery across evaluated datasets/architectures. |
-| 158 | `data2024` | *(unverified)* | A Data Reconstruction Attack Against Vertical Federated Learning Based on Kno... | INFOCOM | -- |
-| 159 | `ganbased2024` | *(unverified)* | GAN-Based Privacy Abuse Attack on Federated Learning in IoT Networks | INFOCOM | -- |
-| 160 | `fedsecurity2024_2` | *(unverified)* | FedSecurity: A Benchmark for Attacks and Defenses in Federated Learning and F... | KDD | -- |
-| 161 | `dager2024` | *(unverified)* | DAGER: Exact Gradient Inversion for Large Language Models | NeurIPS | -- |
-| 162 | `datastealing2024` | *(unverified)* | DataStealing: Steal Data from Diffusion Models in Federated Learning with Mul... | NeurIPS | -- |
-| 163 | `freerider2024` | *(unverified)* | Free-Rider and Conflict Aware Collaboration Formation for Cross-Silo Federate... | NeurIPS | -- |
-| 164 | `spear2024` | *(unverified)* | SPEAR: Exact Gradient Inversion of Batches in Federated Learning | NeurIPS | -- |
-| 165 | `loki2024` | *(unverified)* | Loki: Large-scale Data Reconstruction Attack against Federated Learning throu... | S&P | -- |
-| 166 | `gradient2024` | *(unverified)* | Gradient Inversion Attacks: Impact Factors Analyses and Privacy Enhancement | TPAMI | -- |
-| 167 | `impact2024` | *(unverified)* | The Impact of Adversarial Attacks on Federated Learning: A Survey | TPAMI | -- |
-| 168 | `federated2024` | *(unverified)* | Federated Learning Vulnerabilities: Privacy Attacks with Denoising Diffusion ... | WWW | -- |
-| 169 | `poisoning2024` | *(unverified)* | Poisoning Attack on Federated Knowledge Graph Embedding | WWW | -- |
-| 170 | `poisoning2024_2` | *(unverified)* | Poisoning Federated Recommender Systems with Fake Users | WWW | -- |
+| 146 | `adversarial2024` | *(unverified)* | [Adversarial Attacks on Federated-Learned Adaptive Bitrate Algorithms](https://ojs.aaai.org/index.php/AAAI/article/view/27796) | AAAI | -- |
+| 147 | `foreseeing2024` | *(unverified)* | [Foreseeing Reconstruction Quality of Gradient Inversion: An Optimization Pers...](https://arxiv.org/abs/2312.12488) | AAAI | -- |
+| 148 | `highfidelity2024` | *(unverified)* | [High-Fidelity Gradient Inversion in Distributed Learning](https://ojs.aaai.org/index.php/AAAI/article/view/29975) | AAAI | -- |
+| 149 | `analysis2024` | *(unverified)* | [Analysis of Privacy Leakage in Federated Large Language Models](https://arxiv.org/abs/2403.04784) | AISTATS | -- |
+| 150 | `not2024` | *(unverified)* | [Not One Less: Exploring Interplay between User Profiles and Items in Untarget...](https://dl.acm.org/doi/10.1145/3658644.3670365) | CCS | -- |
+| 151 | `uncovering2024` | *(unverified)* | [Uncovering Gradient Inversion Risks in Practical Language Model Training](https://arxiv.org/abs/2507.21198) | CCS | -- |
+| 152 | `leak2024` | *(unverified)* | [Leak and Learn: An Attacker's Cookbook to Train Using Leaked Data from Federa...](https://arxiv.org/abs/2403.18144) | CVPR | -- |
+| 153 | `the2024` | *(unverified)* | [On the Efficiency of Privacy Attacks in Federated Learning](https://arxiv.org/abs/2404.09430) | CVPR workshop | -- |
+| 154 | `fedinverse2024` | *(unverified)* | [FedInverse: Evaluating Privacy Leakage in Federated Learning](https://openreview.net/forum?id=nTNgkEIfeb) | ICLR | -- |
+| 155 | `hiding2024` | *(unverified)* | [Hiding in Plain Sight: Disguising Data Stealing Attacks in Federated Learning](https://arxiv.org/abs/2306.03013) | ICLR | ICLR abstract reports data stealing for batch sizes up to 512 and under secure aggregation while meeting stated detectability requirements. |
+| 156 | `towards2024` | *(unverified)* | [Towards Eliminating Hard Label Constraints in Gradient Inversion Attacks](https://arxiv.org/abs/2402.03124) | ICLR | -- |
+| 157 | `breaking2024` | *(unverified)* | [Breaking Secure Aggregation: Label Leakage from Aggregated Gradients in Feder...](https://arxiv.org/abs/2406.15731) | INFOCOM | Primary preprint abstract reports bypassing secure aggregation and 100% label recovery across evaluated datasets/architectures. |
+| 158 | `data2024` | *(unverified)* | [A Data Reconstruction Attack Against Vertical Federated Learning Based on Kno...](https://ieeexplore.ieee.org/document/10620788/) | INFOCOM | -- |
+| 159 | `ganbased2024` | *(unverified)* | [GAN-Based Privacy Abuse Attack on Federated Learning in IoT Networks](https://ieeexplore.ieee.org/document/10620772/) | INFOCOM | -- |
+| 160 | `fedsecurity2024_2` | *(unverified)* | [FedSecurity: A Benchmark for Attacks and Defenses in Federated Learning and F...](https://arxiv.org/abs/2306.04959) | KDD | -- |
+| 161 | `dager2024` | *(unverified)* | [DAGER: Exact Gradient Inversion for Large Language Models](https://arxiv.org/abs/2405.15586) | NeurIPS | -- |
+| 162 | `datastealing2024` | *(unverified)* | [DataStealing: Steal Data from Diffusion Models in Federated Learning with Mul...](https://proceedings.neurips.cc/paper_files/paper/2024/hash/ef63b00ad8475605b2eaf520747f61d4-Abstract-Conference.html) | NeurIPS | -- |
+| 163 | `freerider2024` | *(unverified)* | [Free-Rider and Conflict Aware Collaboration Formation for Cross-Silo Federate...](https://arxiv.org/abs/2410.19321) | NeurIPS | -- |
+| 164 | `spear2024` | *(unverified)* | [SPEAR: Exact Gradient Inversion of Batches in Federated Learning](https://arxiv.org/abs/2403.03945) | NeurIPS | -- |
+| 165 | `loki2024` | *(unverified)* | [Loki: Large-scale Data Reconstruction Attack against Federated Learning throu...](https://arxiv.org/abs/2303.12233) | S&P | -- |
+| 166 | `gradient2024` | *(unverified)* | [Gradient Inversion Attacks: Impact Factors Analyses and Privacy Enhancement](https://arxiv.org/abs/2208.04767) | TPAMI | -- |
+| 167 | `impact2024` | *(unverified)* | [The Impact of Adversarial Attacks on Federated Learning: A Survey](https://ieeexplore.ieee.org/document/10274102/) | TPAMI | -- |
+| 168 | `federated2024` | *(unverified)* | [Federated Learning Vulnerabilities: Privacy Attacks with Denoising Diffusion ...](https://dl.acm.org/doi/10.1145/3589334.3645514) | WWW | -- |
+| 169 | `poisoning2024` | *(unverified)* | [Poisoning Attack on Federated Knowledge Graph Embedding](https://dl.acm.org/doi/10.1145/3589334.3645422) | WWW | -- |
+| 170 | `poisoning2024_2` | *(unverified)* | [Poisoning Federated Recommender Systems with Fake Users](https://arxiv.org/abs/2402.11637) | WWW | -- |
 
 #### 2025 (26 papers)
 
 | # | Key | Authors | Title | Venue | Key Findings |
 |---|-----|---------|-------|-------|--------------|
-| 171 | `attribute2025` | Francesco Diana; Othmane Marfoq; Chuan Xu; Giovanni Neglia; Frédéric Giroire; Eoin Thomas | Attribute Inference Attacks for Federated Regression Tasks | AAAI | -- |
-| 172 | `personalized2025` | Hanyu Zhao; Zijie Pan; Yajie Wang; Zuobin Ying; Lei Xu; Yu-an Tan | Personalized Label Inference Attack in Federated Transfer Learning via Contra... | AAAI | -- |
-| 173 | `gradient2025` | Ying Gao; Yuxin Xie; Huanghao Deng; Zukun Zhu | Gradient Inversion Attack in Federated Learning: Exposing Text Data through D... | COLING | Across three datasets, exact-match rate improves on average by 39% for TinyBERT-6, 20% for BERT-base, and 15% for BERT-large over the compared sett... |
-| 174 | `fedmia2025` | Gongxi Zhu; Donghao Li; Hanlin Gu; Yuan Yao; Lixin Fan; Yuxing Han | FedMIA: An Effective Membership Inference Attack Exploiting "All for One" Pri... | CVPR | Primary CVPR abstract reports FedMIA outperforms existing MIAs in classification and generative tasks and remains robust across defense strategies,... |
-| 175 | `gradient2025_3` | *(unverified)* | Gradient Inversion Attacks on Parameter-Efficient Fine-Tuning | CVPR | -- |
-| 176 | `can2025` | Wenkai Guo; Xuefeng Liu; Haolin Wang; Jianwei Niu; Shaojie Tang; Jing Yuan | Can Federated Learning Safeguard Private Data in LLM Training? Vulnerabilitie... | EMNLP | ACL paper evaluates multiple privacy defenses and documents persistent FL-LLM privacy vulnerabilities. |
-| 177 | `emerging2025` | Rui Ye; Jingyi Chai; Xiangrui Liu; Yaodong Yang; Yanfeng Wang; Siheng Chen | Emerging Safety Attack and Defense in Federated Instruction Tuning of Large L... | ICLR | Primary ICLR abstract reports up to a 70% safety-rate reduction; existing defenses improve safety by at most 4 percentage points, while the propose... |
-| 178 | `grain2025` | *(unverified)* | GRAIN: Exact Graph Reconstruction from Gradients | ICLR | -- |
-| 179 | `gradient2025_2` | Omri Ben Hemo; Alon Zolfi; Oryan Yehezkel; Omer Hofman; Roman Vainshtein; Hisashi Kojima; Yuval Elovici; Asaf Shabtai | Gradient Inversion of Multimodal Models | ICML | -- |
-| 180 | `theoretically2025` | Quan Minh Nguyen; Minh N. Vu; Truc Nguyen; My T. Thai | Theoretically Unmasking Inference Attacks Against LDP-Protected Clients in Fe... | ICML | Primary ICML page reports persistent privacy risk under LDP; noise sufficient to mitigate the attacks significantly degrades model utility. |
-| 181 | `generic2025` | *(unverified)* | Generic Adversarial Attack Framework Against Vertical Federated Learning | IJCAI | -- |
-| 182 | `mmgia2025` | *(unverified)* | MMGIA: Gradient Inversion Attack Against Multimodal Federated Learning via In... | IJCAI | -- |
-| 183 | `where2025` | *(unverified)* | Where Does This Data Come From? Enhanced Source Inference Attacks in Federate... | IJCAI | -- |
-| 184 | `preference2025` | *(unverified)* | Preference Profiling Attacks Against Vertical Federated Learning Over Graph Data | INFOCOM | -- |
+| 171 | `attribute2025` | Francesco Diana; Othmane Marfoq; Chuan Xu; Giovanni Neglia; Frédéric Giroire; Eoin Thomas | [Attribute Inference Attacks for Federated Regression Tasks](https://arxiv.org/abs/2411.12697) | AAAI | -- |
+| 172 | `personalized2025` | Hanyu Zhao; Zijie Pan; Yajie Wang; Zuobin Ying; Lei Xu; Yu-an Tan | [Personalized Label Inference Attack in Federated Transfer Learning via Contra...](https://ojs.aaai.org/index.php/AAAI/article/view/34438) | AAAI | -- |
+| 173 | `gradient2025` | Ying Gao; Yuxin Xie; Huanghao Deng; Zukun Zhu | [Gradient Inversion Attack in Federated Learning: Exposing Text Data through D...](https://aclanthology.org/2025.coling-main.176/) | COLING | Across three datasets, exact-match rate improves on average by 39% for TinyBERT-6, 20% for BERT-base, and 15% for BERT-large over the compared sett... |
+| 174 | `fedmia2025` | Gongxi Zhu; Donghao Li; Hanlin Gu; Yuan Yao; Lixin Fan; Yuxing Han | [FedMIA: An Effective Membership Inference Attack Exploiting "All for One" Pri...](https://arxiv.org/abs/2402.06289) | CVPR | Primary CVPR abstract reports FedMIA outperforms existing MIAs in classification and generative tasks and remains robust across defense strategies,... |
+| 175 | `gradient2025_3` | *(unverified)* | [Gradient Inversion Attacks on Parameter-Efficient Fine-Tuning](https://arxiv.org/abs/2506.04453) | CVPR | -- |
+| 176 | `can2025` | Wenkai Guo; Xuefeng Liu; Haolin Wang; Jianwei Niu; Shaojie Tang; Jing Yuan | [Can Federated Learning Safeguard Private Data in LLM Training? Vulnerabilitie...](https://arxiv.org/abs/2509.20680) | EMNLP | ACL paper evaluates multiple privacy defenses and documents persistent FL-LLM privacy vulnerabilities. |
+| 177 | `emerging2025` | Rui Ye; Jingyi Chai; Xiangrui Liu; Yaodong Yang; Yanfeng Wang; Siheng Chen | [Emerging Safety Attack and Defense in Federated Instruction Tuning of Large L...](https://arxiv.org/abs/2406.10630) | ICLR | Primary ICLR abstract reports up to a 70% safety-rate reduction; existing defenses improve safety by at most 4 percentage points, while the propose... |
+| 178 | `grain2025` | *(unverified)* | [GRAIN: Exact Graph Reconstruction from Gradients](https://arxiv.org/abs/2503.01838) | ICLR | -- |
+| 179 | `gradient2025_2` | Omri Ben Hemo; Alon Zolfi; Oryan Yehezkel; Omer Hofman; Roman Vainshtein; Hisashi Kojima; Yuval Elovici; Asaf Shabtai | [Gradient Inversion of Multimodal Models](https://proceedings.mlr.press/v267/hemo25a.html) | ICML | -- |
+| 180 | `theoretically2025` | Quan Minh Nguyen; Minh N. Vu; Truc Nguyen; My T. Thai | [Theoretically Unmasking Inference Attacks Against LDP-Protected Clients in Fe...](https://arxiv.org/abs/2506.17292) | ICML | Primary ICML page reports persistent privacy risk under LDP; noise sufficient to mitigate the attacks significantly degrades model utility. |
+| 181 | `generic2025` | *(unverified)* | [Generic Adversarial Attack Framework Against Vertical Federated Learning](https://www.ijcai.org/proceedings/2025/646) | IJCAI | -- |
+| 182 | `mmgia2025` | *(unverified)* | [MMGIA: Gradient Inversion Attack Against Multimodal Federated Learning via In...](https://www.ijcai.org/proceedings/2025/886) | IJCAI | -- |
+| 183 | `where2025` | *(unverified)* | [Where Does This Data Come From? Enhanced Source Inference Attacks in Federate...](https://www.ijcai.org/proceedings/2025/536) | IJCAI | -- |
+| 184 | `preference2025` | *(unverified)* | [Preference Profiling Attacks Against Vertical Federated Learning Over Graph Data](https://ieeexplore.ieee.org/document/11044459/) | INFOCOM | -- |
 | 185 | `vanikg2025` | *(unverified)* | VaniKG: Vanishing Key Gradient Attack and Defense for Robust Federated Aggreg... | INFOCOM | -- |
-| 186 | `raifle2025` | *(unverified)* | RAIFLE: Reconstruction Attacks on Interaction-based Federated Learning with A... | NDSS | -- |
-| 187 | `scalemia2025` | *(unverified)* | Scale-MIA: A Scalable Model Inversion Attack against Secure Federated Learnin... | NDSS | Primary research description reports reconstruction of local samples despite robust secure aggregation. |
-| 188 | `urvfl2025` | *(unverified)* | URVFL: Undetectable Data Reconstruction Attack on Vertical Federated Learning | NDSS | -- |
-| 189 | `cutting2025` | *(unverified)* | Cutting Through Privacy: A Hyperplane-Based Data Reconstruction Attack in Fed... | UAI | -- |
-| 190 | `sok2025` | *(unverified)* | SoK: Gradient Inversion Attacks in Federated Learning | USENIX Security | -- |
-| 191 | `sok2025_2` | *(unverified)* | SoK: On Gradient Leakage in Federated Learning | USENIX Security | -- |
-| 192 | `poisoning2025` | *(unverified)* | Poisoning Attacks and Defenses to Federated Unlearning | WWW | ACM abstract reports BadUnlearn compromises existing federated-unlearning methods; the same paper proposes UnlearnGuard as a stronger defense. |
-| 193 | `selfcomparison2025` | *(unverified)* | Self-Comparison for Dataset-Level Membership Inference in Large (Vision-)Lang... | WWW | -- |
-| 194 | `find2025` | Wenjin Mo; Zhiyuan Li; Minghong Fang; Mingwei Fang | Find a Scapegoat: Poisoning Membership Inference Attack and Defense to Federa... | iccv | Primary ICCV abstract reports effectiveness across various datasets and that the proposed defense reduces the attack's impact to a degree. |
-| 195 | `geminio2025` | Junjie Shan; Ziqi Zhao; Jialin Lu; Rui Zhang; Siu Ming Yiu; Ka-Ho Chow | Geminio: Language-Guided Gradient Inversion Attacks in Federated Learning | iccv | Primary ICCV abstract reports high-success targeted reconstruction across complex datasets and large batch sizes, with resilience against existing ... |
-| 196 | `hfia2025` | *(unverified)* | HFIA: a parasitic feature inference attack and gradient-based defense strateg... | machine learning | -- |
+| 186 | `raifle2025` | *(unverified)* | [RAIFLE: Reconstruction Attacks on Interaction-based Federated Learning with A...](https://arxiv.org/abs/2310.19163) | NDSS | -- |
+| 187 | `scalemia2025` | *(unverified)* | [Scale-MIA: A Scalable Model Inversion Attack against Secure Federated Learnin...](https://arxiv.org/abs/2311.05808) | NDSS | Primary research description reports reconstruction of local samples despite robust secure aggregation. |
+| 188 | `urvfl2025` | *(unverified)* | [URVFL: Undetectable Data Reconstruction Attack on Vertical Federated Learning](https://arxiv.org/abs/2404.19582) | NDSS | -- |
+| 189 | `cutting2025` | *(unverified)* | [Cutting Through Privacy: A Hyperplane-Based Data Reconstruction Attack in Fed...](https://arxiv.org/abs/2505.10264) | UAI | -- |
+| 190 | `sok2025` | *(unverified)* | [SoK: Gradient Inversion Attacks in Federated Learning](https://www.usenix.org/conference/usenixsecurity25/presentation/carletti) | USENIX Security | -- |
+| 191 | `sok2025_2` | *(unverified)* | [SoK: On Gradient Leakage in Federated Learning](https://arxiv.org/abs/2404.05403) | USENIX Security | -- |
+| 192 | `poisoning2025` | *(unverified)* | [Poisoning Attacks and Defenses to Federated Unlearning](https://arxiv.org/abs/2501.17396) | WWW | ACM abstract reports BadUnlearn compromises existing federated-unlearning methods; the same paper proposes UnlearnGuard as a stronger defense. |
+| 193 | `selfcomparison2025` | *(unverified)* | [Self-Comparison for Dataset-Level Membership Inference in Large (Vision-)Lang...](https://arxiv.org/abs/2410.13088) | WWW | -- |
+| 194 | `find2025` | Wenjin Mo; Zhiyuan Li; Minghong Fang; Mingwei Fang | [Find a Scapegoat: Poisoning Membership Inference Attack and Defense to Federa...](https://arxiv.org/abs/2507.00423) | iccv | Primary ICCV abstract reports effectiveness across various datasets and that the proposed defense reduces the attack's impact to a degree. |
+| 195 | `geminio2025` | Junjie Shan; Ziqi Zhao; Jialin Lu; Rui Zhang; Siu Ming Yiu; Ka-Ho Chow | [Geminio: Language-Guided Gradient Inversion Attacks in Federated Learning](https://arxiv.org/abs/2411.14937) | iccv | Primary ICCV abstract reports high-success targeted reconstruction across complex datasets and large batch sizes, with resilience against existing ... |
+| 196 | `hfia2025` | *(unverified)* | [HFIA: a parasitic feature inference attack and gradient-based defense strateg...](https://link.springer.com/article/10.1007/s10994-025-06804-2) | machine learning | -- |
 
 #### 2026 (9 papers)
 
 | # | Key | Authors | Title | Venue | Key Findings |
 |---|-----|---------|-------|-------|--------------|
-| 197 | `generic2026` | Yimin Liu; Peng Jiang; Qi Liu; Liehuang Zhu | Generic Adversarial Attack Framework Against Graph-based Vertical Federated L... | AAAI | -- |
-| 198 | `retaliatory2026` | Xinyi Sheng; Wei Bao; Hequn Wang; Yuqin Liu; Sen Fu | Retaliatory Attacks Against Federated Unlearning via Data Leakage | AAAI | AAAI abstract reports attacks across varied federated-unlearning methods and demonstrates leakage/manipulation caused by the unlearning process. |
-| 199 | `shadeedit2026` | Xu Zhang; Hangcheng Liu; Shangwei Guo; Shudong Zhang; Tianwei Zhang; Tao Xiang | ShadeEdit: A Utility-Preserving and Defense-Evasive Knowledge Manipulation At... | AAAI | AAAI abstract reports average 99.5% attack success across eight robust aggregation algorithms while maintaining instruction-following accuracy. |
-| 200 | `venom2026` | B. Hu; J. Yuan; J. Jiang; C. Hu | Venom: Liquid Diffusion-Guided Gradient Inversion for Breaking Differential P... | AAAI | AAAI abstract reports high-fidelity recovery under strong DP and up to 38,343× speedup over prior approaches. |
-| 201 | `exploring2026` | Pengxin Guo; Runxi Wang; Shuang Zeng; Jinjing Zhu; Haoning Jiang; Yanran Wang; Yuyin Zhou; Feifei Wang; Hui Xiong; Liangqiong Qu | Exploring the Vulnerabilities of Federated Learning: A Deep Dive Into Gradien... | TPAMI | -- |
-| 202 | `beyond2026` | Zhihao Chen; Zirui Gong; Jianting Ning; Yanjun Zhang; Leo Yu Zhang | Beyond Denial-of-Service: The Puppeteer's Attack for Fine-Grained Control in ... | WWW | -- |
-| 203 | `reconstructing2026` | *(unverified)* | Reconstructing Training Data from Adapter-based Federated Large Language Models | WWW | -- |
-| 204 | `spattack2026` | Bo Yan; Yurong Hao; Dingqi Liu; Huabin Sun; Pengpeng Qiao; Wei Yang Bryan Lim; Yang Cao; Chuan Shi | Spattack: Subgroup Poisoning Attacks on Federated Recommender Systems | WWW | -- |
-| 205 | `unveiling2026` | *(unverified)* | Unveiling and Mitigating Untargeted Poisoning Attacks on Federated Knowledge ... | WWW | -- |
+| 197 | `generic2026` | Yimin Liu; Peng Jiang; Qi Liu; Liehuang Zhu | [Generic Adversarial Attack Framework Against Graph-based Vertical Federated L...](https://ojs.aaai.org/index.php/AAAI/article/view/40878) | AAAI | -- |
+| 198 | `retaliatory2026` | Xinyi Sheng; Wei Bao; Hequn Wang; Yuqin Liu; Sen Fu | [Retaliatory Attacks Against Federated Unlearning via Data Leakage](https://ojs.aaai.org/index.php/AAAI/article/view/39725) | AAAI | AAAI abstract reports attacks across varied federated-unlearning methods and demonstrates leakage/manipulation caused by the unlearning process. |
+| 199 | `shadeedit2026` | Xu Zhang; Hangcheng Liu; Shangwei Guo; Shudong Zhang; Tianwei Zhang; Tao Xiang | [ShadeEdit: A Utility-Preserving and Defense-Evasive Knowledge Manipulation At...](https://ojs.aaai.org/index.php/AAAI/article/view/40787) | AAAI | AAAI abstract reports average 99.5% attack success across eight robust aggregation algorithms while maintaining instruction-following accuracy. |
+| 200 | `venom2026` | B. Hu; J. Yuan; J. Jiang; C. Hu | [Venom: Liquid Diffusion-Guided Gradient Inversion for Breaking Differential P...](https://ojs.aaai.org/index.php/AAAI/article/view/39333) | AAAI | AAAI abstract reports high-fidelity recovery under strong DP and up to 38,343× speedup over prior approaches. |
+| 201 | `exploring2026` | Pengxin Guo; Runxi Wang; Shuang Zeng; Jinjing Zhu; Haoning Jiang; Yanran Wang; Yuyin Zhou; Feifei Wang; Hui Xiong; Liangqiong Qu | [Exploring the Vulnerabilities of Federated Learning: A Deep Dive Into Gradien...](https://arxiv.org/abs/2503.11514) | TPAMI | -- |
+| 202 | `beyond2026` | Zhihao Chen; Zirui Gong; Jianting Ning; Yanjun Zhang; Leo Yu Zhang | [Beyond Denial-of-Service: The Puppeteer's Attack for Fine-Grained Control in ...](https://arxiv.org/abs/2601.14687) | WWW | -- |
+| 203 | `reconstructing2026` | *(unverified)* | [Reconstructing Training Data from Adapter-based Federated Large Language Models](https://arxiv.org/abs/2601.17533) | WWW | -- |
+| 204 | `spattack2026` | Bo Yan; Yurong Hao; Dingqi Liu; Huabin Sun; Pengpeng Qiao; Wei Yang Bryan Lim; Yang Cao; Chuan Shi | [Spattack: Subgroup Poisoning Attacks on Federated Recommender Systems](https://arxiv.org/abs/2507.06258) | WWW | -- |
+| 205 | `unveiling2026` | *(unverified)* | [Unveiling and Mitigating Untargeted Poisoning Attacks on Federated Knowledge ...](https://dl.acm.org/doi/10.1145/3774904.3792117) | WWW | -- |
 
 **Total: 205 papers — 96 in-scope (Byzantine FL robustness) + 109 out-of-scope (broader FL security)**
 
