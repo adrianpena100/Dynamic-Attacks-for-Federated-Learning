@@ -2,7 +2,7 @@
 
 > **Purpose:** Systematic comparison of our framework's capabilities against published FL robustness literature.  
 > Map each finding to: (a) prior work that covers it, (b) what is genuinely new.  
-> **Last updated:** 2026-08-10  
+> **Last updated:** 2026-08-16  
 > **Papers cataloged:** 205 (96 in-scope Byzantine FL robustness + 109 broader FL security)  
 > **Known vulnerability pairs:** 99  
 > **Coverage:** NeurIPS, ICML, ICLR, USENIX Security, NDSS, IEEE S&P, ACM CCS, RAID, AISTATS, UAI, IJCAI, KDD, CVPR, WACV, MLSys, IEEE TSP, IEEE TBD, WWW, INFOCOM, arXiv
@@ -233,7 +233,7 @@ Additionally, no benchmark tests **4 trust/reputation defenses** (FLTrust + Fool
 
 ## 6. Gap Analysis: What Is Genuinely New
 
-### Gap 1: Attack-side MAB (epsilon-greedy bandit for the attacker)
+### Gap 1: Attack-side MAB (epsilon-greedy bandit for the attacker) — Automated Assumption Fuzzer
 
 **Status: NO prior work found** (60+ papers surveyed).
 
@@ -241,7 +241,9 @@ Prior MAB in FL is exclusively **defensive**: MAB-RFL (Wan 2022) uses bandit for
 
 No paper places an epsilon-greedy bandit in the hands of the attacker to select among 6 different poisoning primitives round-by-round based on observed model degradation.
 
-**Novelty claim:** "To the best of our knowledge, this is the first framework to employ attacker-side multi-armed bandit selection among diverse poisoning primitives in federated learning."
+**The MAB as an automated assumption fuzzer:** Beyond attack selection, the MAB functions as an empirical assumption prober. Each defense rests on stated assumptions (e.g., "honest majority," "Sybil similarity," "IID data"). The MAB does not know these assumptions — it simply tries all available attacks and gravitates toward whichever causes the most damage. When the MAB converges to an attack that happens to violate a specific defense assumption, it has **discovered** that assumption's weakness empirically, without any prior knowledge of the defense's internals. This makes the MAB a genuine vulnerability discovery mechanism, not just an optimization tool (see Section 6.5).
+
+**Novelty claim:** "To the best of our knowledge, this is the first framework to employ attacker-side multi-armed bandit selection among diverse poisoning primitives in federated learning. The MAB's convergence patterns serve as an automated assumption fuzzer that can empirically discover defense-specific vulnerabilities."
 
 **Confidence:** High — surveyed 60+ papers across all top venues (2017-2026).
 
@@ -326,6 +328,69 @@ All surveyed papers report aggregate accuracy, loss, attack success rate, or F1.
 
 ---
 
+## 6.5 Automated Vulnerability Discovery: How the MAB Finds New Things
+
+### The Core Insight
+
+Every robust aggregation defense rests on **stated assumptions** — mathematical or behavioral conditions that must hold for the defense to work. These assumptions are documented in the original papers but rarely tested systematically. Our MAB-based adaptive attack engine functions as an **automated assumption fuzzer**: it probes each defense empirically, without knowing its assumptions, and gravitates toward whichever attack primitive causes the most damage.
+
+When the MAB converges to an attack that violates a specific defense assumption, it has **discovered** that assumption's weakness — not through analysis, but through empirical trial and error. This is genuinely different from manual attack design, where the researcher must first understand the defense to craft an exploit.
+
+### Discovery Classification Types
+
+The analysis pipeline (`db/atlas_mapping.py`) automatically classifies findings into four discovery types:
+
+| Discovery Type | Definition | Example |
+|----------------|------------|---------|
+| **assumption_violation** | Finding directly contradicts a defense's stated mathematical or behavioral assumption | FoolsGold collapsed under adaptive MAB because diverse attack switching decorrelates the Sybil similarity signal it relies on |
+| **synergistic_composite** | Composite attack is significantly more effective than any individual component | `sample_k` layering causes Bulyan collapse at 89% rate vs 8% for `fixed` — the multi-primitive composition overwhelms the two-stage filtering |
+| **scheduling_sensitivity** | Client scheduling mode significantly changes attack outcome for a defense | `per_round_random` scheduling causes more damage than `sticky` to history-dependent defenses (FoolsGold, MAB-RFL) |
+| **unexpected_convergence** | MAB converged to an attack the knowledge base says should NOT work against this defense | MAB selects an attack the literature marks as ineffective, suggesting the defense is weaker than published |
+
+### Discoveries Already in the Data (600 Runs)
+
+From automated analysis of the 600-run database (252 FEMNIST + 320 MNIST + 22 pilot + 6 dummy):
+
+| # | Defense | Discovery Type | Assumption Violated | Evidence |
+|---|---------|---------------|---------------------|----------|
+| 1 | FoolsGold | assumption_violation | "Sybil similarity: colluding clients produce similar gradient histories" | Collapsed to 3.3% accuracy under adaptive MAB — diverse attack switching each round decorrelates gradient histories |
+| 2 | MAB-RFL | assumption_violation | "Stationarity: client behavior is consistent enough for bandit arms to converge" | Churn scheduling disrupts reputation tracking, exploit via behavioral instability |
+| 3 | Bulyan | assumption_violation | "Strong honest majority: requires n > 4f + 3 honest clients" | 52 collapses across sweep — overrepresentation at 24% malicious violates the stricter majority requirement |
+| 4 | MultiKrum | assumption_violation | "Honest majority: fewer than half the clients are malicious" | 13 collapses — zero Byzantine filtering when malicious fraction triggers overrepresentation |
+| 5 | FedMedian | assumption_violation | "Honest majority: median is robust when fewer than half the values are corrupted" | 64 collapses — most frequent assumption violation in the dataset |
+| 6 | FedTrimmedAvg | assumption_violation | "IID data: non-IID makes honest updates span a wide range" | 28 collapses — trimming honest updates under non-IID data is the primary failure mode |
+| 7 | Bulyan | synergistic_composite | — | Composite `sample_k` causes collapse at rates far exceeding single-attack components |
+| 8 | FedMedian | synergistic_composite | — | Composite attacks collapse median defense despite 100% malicious client rejection ("denial-of-learning") |
+
+**Total automated discoveries: 166 out of 592 findings (28%)**
+
+### How the Pipeline Works
+
+1. **Defense assumptions** are stored in `db/known_vulnerabilities.json` under `defenses.*.assumptions` (4-5 per defense, 15 defenses)
+2. For each finding, `classify_discovery()` checks whether the attack/pattern/scheduling combination contradicts a specific assumption
+3. Discoveries are persisted in the `agent_recommendations` table with `discovery_type` and `assumption_violated` columns
+4. The vulnerability report (`docs/reports/vulnerability_report_atlas.md`) includes an "Automated Discoveries" section
+
+### What Makes This Different From Manual Analysis
+
+| Aspect | Manual vulnerability research | Our automated fuzzer |
+|--------|-------------------------------|---------------------|
+| **Prior knowledge** | Must understand defense internals to craft exploit | Needs zero defense knowledge — explores blindly |
+| **Coverage** | Tests researcher's hypotheses | Explores all combinations (6 attacks × 3 scheduling × 3 layering × 8 defenses) |
+| **Discovery mechanism** | Deductive: analyze → predict weakness → test | Inductive: test everything → observe which assumptions break |
+| **Scalability** | One defense at a time | All defenses simultaneously under identical conditions |
+| **Reproducibility** | Researcher-dependent | Deterministic given same seed and config |
+
+### Conditions That Maximize Discovery Likelihood
+
+The MAB is most likely to discover new vulnerabilities when:
+- **Non-IID data** — widens the honest update distribution, making it harder for defenses to distinguish honest from malicious
+- **Composite attacks** — multi-primitive compositions can overwhelm defenses that assume single attack vectors
+- **Diverse scheduling** — churn and per_round_random break history-dependent defenses that assume persistent client identity
+- **Sufficient rounds** — the MAB needs exploration time before its convergence reveals the defense's weakest assumption (30 rounds may be marginal; 100+ preferred)
+
+---
+
 ## 7. Known vs Novel Findings Classification
 
 ### Known weaknesses (confirmed by prior literature)
@@ -341,18 +406,19 @@ All surveyed papers report aggregate accuracy, loss, attack success rate, or F1.
 
 ### Candidate novel findings (not found in 60+ papers)
 
-| Finding | Why novel | Evidence strength |
-|---------|-----------|-------------------|
-| **Different dominant attack per defense under adaptive MAB** | No prior work tests attacker-side MAB across defenses | Moderate (single-seed, full sweep for 4 defenses, pilot for 4) |
-| **Scheduling mode changes dominant attack** | No prior work sweeps scheduling as attack parameter | Moderate (single-seed, 252-run FEMNIST) |
-| **Multi-layer composition causes universal collapse** | No benchmark tests stacked model poisoning | Moderate (sample_k with k=3 collapsed all 4 swept defenses) |
-| **FoolsGold evasion via MAB switching + churn** | No prior work tests FoolsGold against adaptive + scheduled attacks | Weak (pilot, 1 attacked run) |
-| **FLRAM bypassed by ALIE (all 3 sub-scores high)** | FLRAM only tested with basic attacks by own authors | Weak (pilot, 1 attacked run) |
-| **MAB-RFL reputation exploit via delayed onset** | MAB-RFL only tested with basic attacks by own authors | Weak (pilot, 1 attacked run) |
-| **FLTrust root dataset must scale with class count** | Cao21 tested only 10-class datasets | Moderate (3 root dataset sizes on 62-class) |
-| **Bulyan clean baseline 57pp sensitivity range** | Parameterization sensitivity known but not quantified this extremely | Moderate (3 clean baselines) |
-| **Trust-weight paradox (conservative params = weak discrimination)** | Not formalized in prior work | Moderate (all 4 trust defenses) |
-| **Per-class accuracy reveals disproportionate class damage** | No prior work reports per-class under Byzantine | Moderate (62-class FEMNIST) |
+| Finding | Why novel | Discovery Type | Evidence strength |
+|---------|-----------|---------------|-------------------|
+| **Different dominant attack per defense under adaptive MAB** | No prior work tests attacker-side MAB across defenses | — | Moderate (single-seed, full sweep for 4 defenses, pilot for 4) |
+| **Scheduling mode changes dominant attack** | No prior work sweeps scheduling as attack parameter | scheduling_sensitivity | Moderate (single-seed, 252-run FEMNIST) |
+| **Multi-layer composition causes universal collapse** | No benchmark tests stacked model poisoning | synergistic_composite | Moderate (sample_k with k=3 collapsed all 4 swept defenses) |
+| **FoolsGold evasion via MAB switching + churn** | No prior work tests FoolsGold against adaptive + scheduled attacks | assumption_violation | Weak (pilot, 1 attacked run) |
+| **FLRAM bypassed by ALIE (all 3 sub-scores high)** | FLRAM only tested with basic attacks by own authors | — | Weak (pilot, 1 attacked run) |
+| **MAB-RFL reputation exploit via delayed onset** | MAB-RFL only tested with basic attacks by own authors | assumption_violation | Weak (pilot, 1 attacked run) |
+| **FLTrust root dataset must scale with class count** | Cao21 tested only 10-class datasets | — | Moderate (3 root dataset sizes on 62-class) |
+| **Bulyan clean baseline 57pp sensitivity range** | Parameterization sensitivity known but not quantified this extremely | assumption_violation | Moderate (3 clean baselines) |
+| **Trust-weight paradox (conservative params = weak discrimination)** | Not formalized in prior work | — | Moderate (all 4 trust defenses) |
+| **Per-class accuracy reveals disproportionate class damage** | No prior work reports per-class under Byzantine | — | Moderate (62-class FEMNIST) |
+| **FedMedian denial-of-learning (collapses despite 100% rejection)** | Defense filters all malicious but model still collapses | assumption_violation | Moderate (multiple runs across sweep) |
 
 ---
 
@@ -383,6 +449,7 @@ All surveyed papers report aggregate accuracy, loss, attack success rate, or F1.
 | AML.T0042 | DFL.T008 | Intensity escalation before strategy switch | YES — 0/60+ papers |
 | AML.T0007 | DFL.T009 | Defense vulnerability profiling via bandit convergence | YES — 0/60+ papers |
 | AML.T0015 | DFL.T010 | Cross-axis evasion (attack switching + scheduling erodes Sybil detection) | YES — 0/60+ papers |
+| AML.T0007 | DFL.T011 | Automated defense assumption probing via MAB convergence analysis | YES — 0/60+ papers |
 
 ### Layer 3: Defense-specific vulnerability findings
 

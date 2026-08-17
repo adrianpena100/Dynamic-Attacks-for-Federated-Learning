@@ -492,9 +492,88 @@ def classify_novelty(pattern, defense, attack):
     return "needs_testing"
 
 
+def classify_discovery(pattern, defense, attack, attack_mode=None,
+                       selection_mode=None, layering_mode=None,
+                       accuracy_drop=None, collapse_detected=False):
+    """
+    Classify whether a finding represents a genuine automated discovery.
+
+    Returns (discovery_type, assumption_violated) where discovery_type is one of:
+        None                    — routine finding, no discovery
+        assumption_violation    — defense's stated assumption was empirically broken
+        synergistic_composite   — composite attack more effective than components
+        scheduling_sensitivity  — scheduling mode significantly changes outcome
+        unexpected_convergence  — MAB converged to attack KB says shouldn't work
+    """
+    kb = _load_kb()
+    defense_n = _normalize_name(defense, kb.get("defenses", {}))
+    defenses_db = kb.get("defenses", {})
+    defense_info = defenses_db.get(defense_n, {})
+    assumptions = defense_info.get("assumptions", [])
+
+    # --- Assumption violation ---
+    if collapse_detected and assumptions:
+        for assumption in assumptions:
+            a_lower = assumption.lower()
+
+            # IID assumption violated by non-IID data causing collapse
+            if "iid" in a_lower and pattern in ("defense_collapse", "accuracy_degradation"):
+                return ("assumption_violation", assumption)
+
+            # Honest majority violated — collapse at ≤25% malicious
+            if "honest majority" in a_lower and pattern == "defense_collapse":
+                return ("assumption_violation", assumption)
+
+            # Sybil similarity violated by diverse MAB attacks
+            if "sybil" in a_lower and attack_mode == "adaptive":
+                return ("assumption_violation", assumption)
+
+            # Krum/distance-based filtering violated by ALIE or composites
+            if "krum" in a_lower and "+" in (attack or ""):
+                return ("assumption_violation", assumption)
+
+            # History/stationarity violated by churn or per_round_random
+            if ("history" in a_lower or "stationar" in a_lower or "persistent" in a_lower):
+                if selection_mode in ("churn", "per_round_random"):
+                    return ("assumption_violation", assumption)
+
+            # Coordinate-wise / bounded deviation violated by ALIE
+            if ("bounded" in a_lower or "median" in a_lower or "trimm" in a_lower):
+                attack_parts = (attack or "").split("+")
+                if "alie" in attack_parts:
+                    return ("assumption_violation", assumption)
+
+            # Root dataset assumption for trust-based defenses
+            if "root dataset" in a_lower and pattern == "defense_collapse":
+                return ("assumption_violation", assumption)
+
+    # --- Synergistic composite ---
+    if "+" in (attack or "") and pattern == "defense_collapse":
+        if layering_mode == "sample_k":
+            return ("synergistic_composite", None)
+
+    # --- Scheduling sensitivity ---
+    if selection_mode in ("per_round_random", "churn") and pattern == "defense_collapse":
+        for assumption in assumptions:
+            a_lower = assumption.lower()
+            if any(kw in a_lower for kw in ("history", "reputation", "stationar", "persistent", "consistent")):
+                return ("scheduling_sensitivity", assumption)
+
+    # --- Unexpected convergence ---
+    if pattern == "adaptive_convergence":
+        matches = lookup_known_vulnerability(attack, defense_n)
+        robust_matches = [m for m in matches if not m.get("effective", True)]
+        if robust_matches:
+            return ("unexpected_convergence", None)
+
+    return (None, None)
+
+
 def classify_finding(pattern, defense, attack, accuracy_drop=None,
                      slipthrough_rate=None, trust_score=None,
-                     collapse_detected=False):
+                     collapse_detected=False,
+                     attack_mode=None, selection_mode=None,
+                     layering_mode=None):
     """
     Classify a vulnerability finding with ATLAS mapping and novelty status.
 
@@ -518,6 +597,14 @@ def classify_finding(pattern, defense, attack, accuracy_drop=None,
 
     novelty = classify_novelty(pattern, defense, attack)
     severity = pattern_info.get("severity", "medium")
+
+    # Automated discovery classification
+    discovery_type, assumption_violated = classify_discovery(
+        pattern, defense, attack,
+        attack_mode=attack_mode, selection_mode=selection_mode,
+        layering_mode=layering_mode, accuracy_drop=accuracy_drop,
+        collapse_detected=collapse_detected
+    )
 
     # KB vulnerability matches
     kb_matches = lookup_known_vulnerability(attack, defense)
@@ -593,6 +680,21 @@ def classify_finding(pattern, defense, attack, accuracy_drop=None,
             f"clients passed aggregation filter."
         )
 
+    # Discovery rationale
+    if discovery_type:
+        dtype_labels = {
+            "assumption_violation": "ASSUMPTION VIOLATION",
+            "synergistic_composite": "SYNERGISTIC COMPOSITE",
+            "scheduling_sensitivity": "SCHEDULING SENSITIVITY",
+            "unexpected_convergence": "UNEXPECTED CONVERGENCE",
+        }
+        label = dtype_labels.get(discovery_type, discovery_type.upper())
+        rationale_parts.append(f"[DISCOVERY: {label}]")
+        if assumption_violated:
+            rationale_parts.append(
+                f"Defense assumption broken: \"{assumption_violated}\""
+            )
+
     return {
         "pattern": pattern,
         "defense": defense,
@@ -613,6 +715,8 @@ def classify_finding(pattern, defense, attack, accuracy_drop=None,
              "mechanism": m.get("mechanism", "")}
             for m in kb_matches
         ],
+        "discovery_type": discovery_type,
+        "assumption_violated": assumption_violated,
     }
 
 
@@ -716,7 +820,8 @@ def get_novelty_summary():
 
 def build_finding_context(attack, defense, pattern, accuracy_drop=None,
                           slipthrough_rate=None, trust_score=None,
-                          dominant_attack_fraction=None):
+                          dominant_attack_fraction=None,
+                          selection_mode=None, layering_mode=None):
     """
     Build a rich knowledge-base context for a single finding.
 
@@ -876,7 +981,8 @@ def build_finding_context(attack, defense, pattern, accuracy_drop=None,
 
     # --- Assumptions exploited ---
     assumptions_exploited = _identify_exploited_assumptions(
-        defense_profile, attack_n, pattern, attack_info)
+        defense_profile, attack_n, pattern, attack_info,
+        selection_mode=selection_mode, layering_mode=layering_mode)
 
     return {
         "defense_profile": defense_profile,
@@ -1058,7 +1164,8 @@ def _build_next_steps(defense, attack, pattern, novelty, accuracy_drop,
     return steps
 
 
-def _identify_exploited_assumptions(defense_profile, attack, pattern, attack_info):
+def _identify_exploited_assumptions(defense_profile, attack, pattern, attack_info,
+                                    selection_mode=None, layering_mode=None):
     """Identify which defense assumptions this attack/pattern exploits."""
     assumptions = defense_profile.get("assumptions", [])
     if not assumptions:
@@ -1067,6 +1174,7 @@ def _identify_exploited_assumptions(defense_profile, attack, pattern, attack_inf
     exploited = []
     attack_cat = attack_info.get("category", "")
     category = defense_profile.get("category", "")
+    attack_parts = attack.split("+") if attack else [attack]
 
     for assumption in assumptions:
         a_lower = assumption.lower()
@@ -1074,25 +1182,34 @@ def _identify_exploited_assumptions(defense_profile, attack, pattern, attack_inf
             exploited.append(assumption)
         elif "honest majority" in a_lower and pattern == "defense_collapse":
             exploited.append(assumption)
-        elif "distance" in a_lower and attack in ("alie", "mimic", "good_gradients"):
+        elif "distance" in a_lower and any(a in ("alie", "mimic", "good_gradients") for a in attack_parts):
             exploited.append(assumption)
-        elif "extreme" in a_lower and attack == "alie":
+        elif "extreme" in a_lower and "alie" in attack_parts:
             exploited.append(assumption)
-        elif ("cosine" in a_lower or "direction" in a_lower) and attack == "sign_flip":
+        elif ("cosine" in a_lower or "direction" in a_lower) and "sign_flip" in attack_parts:
             exploited.append(assumption)
         elif "root dataset" in a_lower and category == "trust_based":
             exploited.append(assumption)
         elif "sybil" in a_lower and pattern in ("trust_failure", "poor_trust_separation"):
             exploited.append(assumption)
+        elif "sybil" in a_lower and "+" in (attack or "") and pattern == "defense_collapse":
+            exploited.append(assumption)
         elif "reputation" in a_lower and pattern in ("trust_failure", "adaptive_convergence"):
             exploited.append(assumption)
-        elif "norm" in a_lower and attack in ("constrain_and_scale", "pill"):
+        elif ("history" in a_lower or "stationar" in a_lower or "persistent" in a_lower
+              or "consistent" in a_lower):
+            if selection_mode in ("churn", "per_round_random"):
+                exploited.append(assumption)
+        elif "norm" in a_lower and any(a in ("constrain_and_scale", "pill") for a in attack_parts):
             exploited.append(assumption)
-        elif "sign" in a_lower and attack == "sign_flip":
+        elif "sign" in a_lower and "sign_flip" in attack_parts:
             exploited.append(assumption)
-        elif "median" in a_lower and attack == "alie":
+        elif "median" in a_lower and "alie" in attack_parts:
             exploited.append(assumption)
-        elif "trimm" in a_lower and attack == "alie":
+        elif "trimm" in a_lower and "alie" in attack_parts:
             exploited.append(assumption)
+        elif ("krum" in a_lower or "two-stage" in a_lower or "multi-stage" in a_lower):
+            if "+" in (attack or "") and layering_mode == "sample_k":
+                exploited.append(assumption)
 
     return exploited

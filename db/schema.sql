@@ -376,7 +376,10 @@ CREATE TABLE IF NOT EXISTS agent_recommendations (
     rationale                TEXT,           -- plain English explanation
     -- MITRE ATLAS mapping
     atlas_technique_id       TEXT,           -- comma-separated ATLAS IDs, e.g. "AML.T0018.000,AML.T0031"
-    novelty_status           TEXT            -- "known_weakness", "reproduced", "candidate_new", "needs_testing"
+    novelty_status           TEXT,           -- "known_weakness", "reproduced", "candidate_new", "needs_testing"
+    -- Automated discovery classification
+    discovery_type           TEXT,           -- NULL, "assumption_violation", "synergistic_composite", "scheduling_sensitivity", "unexpected_convergence"
+    assumption_violated      TEXT            -- the specific defense assumption text that was broken, NULL if N/A
 );
 
 CREATE INDEX idx_recommendations_priority ON agent_recommendations(priority_score DESC);

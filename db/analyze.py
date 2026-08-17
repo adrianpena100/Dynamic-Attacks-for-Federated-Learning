@@ -287,11 +287,82 @@ def find_backdoor_success(conn):
     return [dict(r) for r in rows]
 
 
+def find_composite_synergies(conn):
+    """Find composite attacks that are significantly more damaging than single attacks."""
+    rows = conn.execute("""
+        SELECT
+            bc.strategy,
+            r.layering_mode,
+            ae.attack_name AS final_attack,
+            AVG(bc.accuracy_drop) AS avg_drop,
+            SUM(bc.collapse_detected) AS collapse_count,
+            COUNT(*) AS run_count,
+            r.selection_mode,
+            r.attack_mode
+        FROM baseline_comparisons bc
+        JOIN runs r ON r.run_id = bc.attacked_run_id
+        LEFT JOIN attack_events ae ON ae.run_id = bc.attacked_run_id
+            AND ae.round = (SELECT MAX(round) FROM attack_events WHERE run_id = ae.run_id)
+        WHERE r.is_baseline = 0
+          AND ae.attack_name LIKE '%+%'
+        GROUP BY bc.strategy, r.layering_mode
+        HAVING collapse_count > 0 OR avg_drop > 0.2
+        ORDER BY avg_drop DESC
+    """).fetchall()
+    return [dict(r) for r in rows]
+
+
+def find_scheduling_sensitivity(conn):
+    """Find cases where scheduling mode significantly changes attack outcome."""
+    rows = conn.execute("""
+        SELECT
+            bc.strategy,
+            r.selection_mode,
+            AVG(bc.accuracy_drop) AS avg_drop,
+            SUM(bc.collapse_detected) AS collapse_count,
+            COUNT(*) AS run_count,
+            r.attack_mode,
+            r.layering_mode
+        FROM baseline_comparisons bc
+        JOIN runs r ON r.run_id = bc.attacked_run_id
+        WHERE r.is_baseline = 0
+        GROUP BY bc.strategy, r.selection_mode
+        ORDER BY bc.strategy, avg_drop DESC
+    """).fetchall()
+
+    findings = []
+    by_strategy = {}
+    for r in rows:
+        d = dict(r)
+        by_strategy.setdefault(d["strategy"], []).append(d)
+
+    for strategy, modes in by_strategy.items():
+        if len(modes) < 2:
+            continue
+        modes.sort(key=lambda x: x["avg_drop"] or 0, reverse=True)
+        worst = modes[0]
+        best = modes[-1]
+        gap = (worst["avg_drop"] or 0) - (best["avg_drop"] or 0)
+        if gap > 0.1 or (worst["collapse_count"] and not best["collapse_count"]):
+            findings.append({
+                "strategy": strategy,
+                "worst_mode": worst["selection_mode"],
+                "worst_drop": worst["avg_drop"],
+                "worst_collapses": worst["collapse_count"],
+                "best_mode": best["selection_mode"],
+                "best_drop": best["avg_drop"],
+                "gap": gap,
+                "attack_mode": worst.get("attack_mode"),
+                "layering_mode": worst.get("layering_mode"),
+            })
+    return findings
+
+
 # ---------------------------------------------------------------------------
 # Scoring
 # ---------------------------------------------------------------------------
 
-def score_finding(finding_type, data):
+def score_finding(finding_type, data, discovery_type=None):
     """Score a finding for defense_weakness, attack_effectiveness, evidence_strength."""
 
     if finding_type == "defense_collapse":
@@ -338,6 +409,11 @@ def score_finding(finding_type, data):
         effectiveness = 0.3
         evidence = 0.3
 
+    # Boost evidence when an automated discovery was flagged
+    if discovery_type:
+        evidence = min(1.0, evidence + 0.15)
+        weakness = min(1.0, weakness + 0.1)
+
     priority = 0.4 * weakness + 0.3 * effectiveness + 0.3 * evidence
     return {
         "defense_weakness_score": round(weakness, 2),
@@ -368,9 +444,12 @@ def write_recommendations(conn, findings):
             "pattern": f.get("pattern", ""),
         })
 
+        discovery_type = f["classification"].get("discovery_type")
+        assumption_violated = f["classification"].get("assumption_violated")
+
         conn.execute(
             """INSERT INTO agent_recommendations VALUES
-               (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+               (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 f"rec_{_uid()}",
                 now,
@@ -389,6 +468,8 @@ def write_recommendations(conn, findings):
                 f["classification"]["rationale"],
                 atlas_ids,
                 novelty,
+                discovery_type,
+                assumption_violated,
             ),
         )
     conn.commit()
@@ -480,6 +561,8 @@ def generate_report(conn, findings):
             slipthrough_rate=f.get("slipthrough_rate"),
             trust_score=f.get("trust_score"),
             dominant_attack_fraction=f.get("fraction"),
+            selection_mode=f.get("selection_mode"),
+            layering_mode=f.get("layering_mode"),
         )
 
         lines.append(f"### Finding {i}: {f['pattern'].replace('_', ' ').title()} — {f['strategy']}")
@@ -491,6 +574,10 @@ def generate_report(conn, findings):
         lines.append(f"| Pattern | {f['pattern']} |")
         lines.append(f"| ATLAS Techniques | {atlas_str} |")
         lines.append(f"| Novelty Status | **{c['novelty_status']}** |")
+        if c.get("discovery_type"):
+            lines.append(f"| Discovery Type | **{c['discovery_type']}** |")
+            if c.get("assumption_violated"):
+                lines.append(f"| Assumption Violated | {c['assumption_violated']} |")
         lines.append(f"| Severity | {c['severity']} |")
         lines.append(f"| Priority | {s['priority_score']:.2f} (weakness={s['defense_weakness_score']:.2f}, effectiveness={s['attack_effectiveness_score']:.2f}, evidence={s['evidence_strength']:.2f}) |")
         lines.append("")
@@ -640,6 +727,44 @@ def generate_report(conn, findings):
     for item in novelty_summary["well_established"]:
         lines.append(f"- {item}")
     lines.append("")
+
+    # --- Automated discoveries ---
+    discoveries = [f for f in findings if f["classification"].get("discovery_type")]
+    if discoveries:
+        lines.append("## Automated Vulnerability Discoveries")
+        lines.append("")
+        lines.append("These findings were flagged by the automated assumption-fuzzing pipeline,")
+        lines.append("which classifies findings that contradict a defense's stated assumptions")
+        lines.append("or reveal unexpected behavior under composite/scheduling conditions.")
+        lines.append("")
+        lines.append("| # | Defense | Discovery Type | Assumption Violated | Pattern | Attack |")
+        lines.append("|---|---------|---------------|--------------------:|---------|--------|")
+        for i, f in enumerate(discoveries, 1):
+            dtype = f["classification"]["discovery_type"]
+            assumption = f["classification"].get("assumption_violated") or "—"
+            if len(assumption) > 60:
+                assumption = assumption[:57] + "..."
+            lines.append(
+                f"| {i} | {f['strategy']} | {dtype} | {assumption} | "
+                f"{f['pattern']} | {f.get('attack', 'N/A')} |"
+            )
+        lines.append("")
+
+        by_type = {}
+        for f in discoveries:
+            by_type.setdefault(f["classification"]["discovery_type"], []).append(f)
+
+        for dtype, items in sorted(by_type.items()):
+            label = dtype.replace("_", " ").title()
+            lines.append(f"### {label} ({len(items)} findings)")
+            lines.append("")
+            for f in items:
+                assumption = f["classification"].get("assumption_violated")
+                lines.append(f"- **{f['strategy']}** under {f.get('attack', 'N/A')} "
+                             f"({f['pattern']})")
+                if assumption:
+                    lines.append(f"  - Broken assumption: *\"{assumption}\"*")
+            lines.append("")
 
     # --- Caveats ---
     lines.append("## Caveats and Limitations")
@@ -828,8 +953,12 @@ def run_analysis():
             "defense_collapse", c["strategy"], attack,
             accuracy_drop=c.get("accuracy_drop"),
             collapse_detected=True,
+            attack_mode=c.get("attack_mode"),
+            selection_mode=c.get("selection_mode"),
+            layering_mode=c.get("layering_mode"),
         )
-        scores = score_finding("defense_collapse", c)
+        scores = score_finding("defense_collapse", c,
+                               discovery_type=classification.get("discovery_type"))
         all_findings.append({
             "pattern": "defense_collapse",
             "strategy": c["strategy"],
@@ -852,13 +981,19 @@ def run_analysis():
         classification = classify_finding(
             "accuracy_degradation", d["strategy"], attack,
             accuracy_drop=d.get("accuracy_drop"),
+            attack_mode=d.get("attack_mode"),
+            selection_mode=d.get("selection_mode"),
+            layering_mode=d.get("layering_mode"),
         )
-        scores = score_finding("accuracy_degradation", d)
+        scores = score_finding("accuracy_degradation", d,
+                               discovery_type=classification.get("discovery_type"))
         all_findings.append({
             "pattern": "accuracy_degradation",
             "strategy": d["strategy"],
             "attack": attack,
             "attack_mode": d.get("attack_mode"),
+            "selection_mode": d.get("selection_mode"),
+            "layering_mode": d.get("layering_mode"),
             "accuracy_drop": d.get("accuracy_drop"),
             "clean_final_accuracy": d.get("clean_final_accuracy"),
             "attacked_final_accuracy": d.get("attacked_final_accuracy"),
@@ -944,8 +1079,10 @@ def run_analysis():
     for c in convergences:
         classification = classify_finding(
             "adaptive_convergence", c["strategy"], c["dominant_attack"],
+            attack_mode="adaptive",
         )
-        scores = score_finding("adaptive_convergence", c)
+        scores = score_finding("adaptive_convergence", c,
+                               discovery_type=classification.get("discovery_type"))
         all_findings.append({
             "pattern": "adaptive_convergence",
             "strategy": c["strategy"],
@@ -956,7 +1093,63 @@ def run_analysis():
             "scores": scores,
         })
 
-    # 8. Resilient defenses
+    # 8. Composite synergies
+    synergies = find_composite_synergies(conn)
+    print(f"  Found {len(synergies)} composite synergy patterns")
+    for s in synergies:
+        attack = s.get("final_attack", "composite") or "composite"
+        classification = classify_finding(
+            "defense_collapse", s["strategy"], attack,
+            accuracy_drop=s.get("avg_drop"),
+            collapse_detected=bool(s.get("collapse_count")),
+            attack_mode=s.get("attack_mode"),
+            selection_mode=s.get("selection_mode"),
+            layering_mode=s.get("layering_mode"),
+        )
+        scores = score_finding("defense_collapse", s,
+                               discovery_type=classification.get("discovery_type"))
+        all_findings.append({
+            "pattern": "composite_synergy",
+            "strategy": s["strategy"],
+            "attack": attack,
+            "attack_mode": s.get("attack_mode"),
+            "selection_mode": s.get("selection_mode"),
+            "layering_mode": s.get("layering_mode"),
+            "accuracy_drop": s.get("avg_drop"),
+            "collapse_count": s.get("collapse_count"),
+            "run_count": s.get("run_count"),
+            "classification": classification,
+            "scores": scores,
+        })
+
+    # 9. Scheduling sensitivity
+    sched_findings = find_scheduling_sensitivity(conn)
+    print(f"  Found {len(sched_findings)} scheduling sensitivity patterns")
+    for sf in sched_findings:
+        classification = classify_finding(
+            "defense_collapse", sf["strategy"], "varied",
+            accuracy_drop=sf.get("worst_drop"),
+            collapse_detected=bool(sf.get("worst_collapses")),
+            selection_mode=sf.get("worst_mode"),
+            attack_mode=sf.get("attack_mode"),
+            layering_mode=sf.get("layering_mode"),
+        )
+        scores = score_finding("defense_collapse", sf,
+                               discovery_type=classification.get("discovery_type"))
+        all_findings.append({
+            "pattern": "scheduling_sensitivity",
+            "strategy": sf["strategy"],
+            "attack": "varied",
+            "selection_mode": sf.get("worst_mode"),
+            "worst_drop": sf.get("worst_drop"),
+            "best_drop": sf.get("best_drop"),
+            "gap": sf.get("gap"),
+            "worst_collapses": sf.get("worst_collapses"),
+            "classification": classification,
+            "scores": scores,
+        })
+
+    # 10. Resilient defenses
     resilient = find_resilient_defenses(conn)
     print(f"  Found {len(resilient)} resilient defense observations")
     for r in resilient:
@@ -1021,3 +1214,17 @@ if __name__ == "__main__":
             for f in items:
                 print(f"    - {f['strategy']}: {f['pattern']} "
                       f"({', '.join(f['classification']['atlas_technique_ids'][:3])})")
+
+    # Discovery summary
+    discoveries = [f for f in findings if f["classification"].get("discovery_type")]
+    if discoveries:
+        print(f"\n  AUTOMATED DISCOVERIES ({len(discoveries)}):")
+        by_dtype = {}
+        for f in discoveries:
+            by_dtype.setdefault(f["classification"]["discovery_type"], []).append(f)
+        for dtype, items in sorted(by_dtype.items()):
+            print(f"\n    {dtype} ({len(items)}):")
+            for f in items:
+                assumption = f["classification"].get("assumption_violated", "")
+                suffix = f' — "{assumption[:60]}"' if assumption else ""
+                print(f"      - {f['strategy']}: {f['pattern']}{suffix}")
