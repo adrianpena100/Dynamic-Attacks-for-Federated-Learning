@@ -102,6 +102,7 @@ def load_run_data(run_dir: Path) -> Dict[str, Any]:
         "round_attack_stats": _read_csv_dicts(summaries_dir / "round_attack_stats.csv"),
         "trust_by_round": _read_csv_dicts(summaries_dir / "trust_strategy_by_round.csv"),
         "defense_selection": _read_csv_dicts(summaries_dir / "defense_selection_by_round.csv"),
+        "defense_filter": _read_csv_dicts(summaries_dir / "defense_filter_by_round.csv"),
         "malicious_ids": set(str(x) for x in config.get("ever_malicious_client_ids", [])),
     }
 
@@ -206,6 +207,7 @@ def analyze_defense_behavior(data: Dict) -> Dict:
     is_filter = strategy in FILTER_STRATEGIES
     trust_csv = data["trust_by_round"]
     defense_sel = data["defense_selection"]
+    defense_filter = data.get("defense_filter", [])
     defense_summary = data["defense_summary"]
     malicious_ids = data["malicious_ids"]
 
@@ -213,7 +215,62 @@ def analyze_defense_behavior(data: Dict) -> Dict:
         "strategy": strategy,
         "is_trust_based": is_trust,
         "is_filter_based": is_filter,
+        "telemetry_availability": {
+            "trust": {
+                "applicable": is_trust,
+                "available": bool(is_trust and trust_csv),
+                "reason": (
+                    "available" if is_trust and trust_csv
+                    else "not_applicable" if not is_trust
+                    else "no valid trust rows"
+                ),
+            },
+            "defense_selection": {
+                "applicable": is_filter,
+                "available": False,
+                "reason": "not_applicable" if not is_filter else "no valid selection rows",
+            },
+            "defense_filter": {
+                "applicable": True,
+                "available": bool(defense_filter),
+                "reason": "available" if defense_filter else "file missing or empty",
+            },
+        },
     }
+
+    valid_selection_rows = []
+    for row in defense_sel:
+        name = str(row.get("defense_strategy") or "").strip().lower()
+        try:
+            selected_count = int(float(row.get("num_selected_by_defense") or 0))
+        except (TypeError, ValueError):
+            selected_count = 0
+        if name not in {"", "-", "none", "n/a", "na"} and selected_count > 0:
+            valid_selection_rows.append(row)
+
+    if is_filter and valid_selection_rows:
+        result["telemetry_availability"]["defense_selection"] = {
+            "applicable": True,
+            "available": True,
+            "reason": "available",
+        }
+
+    if defense_filter:
+        modes = sorted({str(row.get("mode") or "none").strip().lower() for row in defense_filter})
+        rejected = 0
+        kept = 0
+        for row in defense_filter:
+            try:
+                rejected += int(float(row.get("num_rejected") or 0))
+                kept += int(float(row.get("num_after") or 0))
+            except (TypeError, ValueError):
+                continue
+        result["defense_filter"] = {
+            "modes": modes,
+            "active": any(mode not in {"", "none", "off", "disabled"} for mode in modes),
+            "total_rejected": rejected,
+            "total_kept_observations": kept,
+        }
 
     if is_trust and trust_csv and malicious_ids:
         mal_trusts = []
@@ -247,7 +304,7 @@ def analyze_defense_behavior(data: Dict) -> Dict:
             "trust_failure_rounds": len(trust_failure_rounds),
         })
 
-    if is_filter and defense_summary:
+    if is_filter and valid_selection_rows and defense_summary:
         slipthrough = defense_summary.get("overall_malicious_selected_fraction", 0)
         result.update({
             "slipthrough_rate": slipthrough,
@@ -260,6 +317,37 @@ def analyze_defense_behavior(data: Dict) -> Dict:
         })
 
     return result
+
+
+def assess_research_validity(data: Dict, attack: Dict) -> Dict[str, Any]:
+    """State what a single run can and cannot support scientifically.
+
+    Cross-run baseline matching and multi-seed comparisons happen at sweep
+    level. A per-run report is therefore always an exploratory observation.
+    """
+
+    limitations = [
+        "A single run cannot establish attack-caused degradation without a matched clean baseline.",
+        "A single run cannot establish reproducibility without at least three seeds.",
+    ]
+    if attack.get("mode") == "adaptive":
+        limitations.append(
+            "Adaptive advantage is unvalidated until compared with every fixed primitive under matched settings."
+        )
+    return {
+        "scope": "single_run",
+        "status": "exploratory_observation",
+        "causal_attack_effect_validated": False,
+        "adaptive_advantage_validated": False,
+        "novelty_confirmed": False,
+        "limitations": limitations,
+        "required_confirmation": [
+            "matched clean baseline",
+            "matched fixed-attack controls",
+            "at least three seeds",
+            "cross-dataset confirmation for general claims",
+        ],
+    }
 
 
 # ── Finding detection ────────────────────────────────────────────────────────
@@ -279,7 +367,10 @@ def detect_findings(
         findings.append({
             "pattern": "defense_collapse",
             "severity": "critical",
-            "description": f"Accuracy collapsed to {acc['final']:.3f} (< 0.05)",
+            "description": (
+                f"Observed final accuracy was {acc['final']:.3f} (< 0.05); "
+                "attack causality is unestablished without a matched clean baseline"
+            ),
             "evidence": {"final_accuracy": acc["final"], "peak": acc["peak"]},
         })
 
@@ -717,7 +808,7 @@ def generate_suggestions(
                 f"Adaptive MAB converged to {dominant} in "
                 f"{attack.get('dominant_fraction', 0):.0%} of rounds "
                 f"(reward source: {reward_src}) — "
-                f"this is the dominant vulnerability for {strategy}. "
+                f"this is the dominant selected attack in this run, not yet a validated vulnerability for {strategy}. "
                 f"Run a targeted single-attack experiment with just "
                 f"{dominant} to measure its standalone impact, then test "
                 f"a defense parameter adjustment against that attack."
@@ -779,6 +870,7 @@ def format_terminal_output(
     lines.append(f"  Strategy       : {strategy}")
     lines.append(f"  Dataset        : {dataset} ({iid_label}, alpha={alpha})")
     lines.append(f"  Rounds         : {rounds}")
+    lines.append("  Evidence level : exploratory single-run observation")
 
     if acc.get("available"):
         lines.append(
@@ -854,15 +946,19 @@ def format_terminal_output(
             lines.append("  [no trust data available]")
     elif defense.get("is_filter_based"):
         lines.append("  [filter-based]")
-        slip = defense.get("slipthrough_rate", 0)
-        slip_label = "HIGH" if slip > 0.3 else "OK"
-        lines.append(
-            f"  Slipthrough rate : {slip:.1%}  [{slip_label}]"
-        )
-        lines.append(
-            f"  Rounds with leak : "
-            f"{defense.get('rounds_with_slipthrough', 0)}"
-        )
+        availability = defense.get("telemetry_availability", {}).get("defense_selection", {})
+        if availability.get("available"):
+            slip = defense.get("slipthrough_rate", 0)
+            slip_label = "HIGH" if slip > 0.3 else "OK"
+            lines.append(
+                f"  Slipthrough rate : {slip:.1%}  [{slip_label}]"
+            )
+            lines.append(
+                f"  Rounds with leak : "
+                f"{defense.get('rounds_with_slipthrough', 0)}"
+            )
+        else:
+            lines.append("  [selection telemetry unavailable; no zero-value inference made]")
     else:
         lines.append(f"  [{strategy} — coordinate-wise defense]")
     lines.append("")
@@ -884,7 +980,7 @@ def format_terminal_output(
             tag = "ROBUST"
             known_count += 1
         elif novelty == "candidate_new":
-            tag = "NOVEL"
+            tag = "CANDIDATE NEW"
             novel_count += 1
         else:
             tag = novelty.upper() if novelty else "?"
@@ -1051,7 +1147,8 @@ def _strip_context(findings: List[Dict]) -> List[Dict]:
 
 def build_json_output(
     run_dir: Path, data: Dict, acc: Dict, attack: Dict,
-    defense: Dict, findings: List[Dict], suggestions: List[Dict]
+    defense: Dict, findings: List[Dict], suggestions: List[Dict],
+    research_validity: Dict[str, Any],
 ) -> Dict:
     rc = data["run_config"]
     f1_series = data.get("f1_macro", [])
@@ -1080,6 +1177,7 @@ def build_json_output(
         },
         "attack": attack,
         "defense": defense,
+        "research_validity": research_validity,
         "findings": _strip_context(findings),
         "suggestions": suggestions,
     }
@@ -1096,10 +1194,15 @@ def analyze_run(run_dir: Path, json_only: bool = False) -> Dict:
     defense = analyze_defense_behavior(data)
     findings = detect_findings(acc, attack, defense, data["backdoor_asr"],
                                run_config=data.get("run_config"))
+    research_validity = assess_research_validity(data, attack)
+    for finding in findings:
+        finding["validation_status"] = "candidate_observation"
+        finding["claim_limitations"] = list(research_validity["limitations"])
     suggestions = generate_suggestions(data, findings, attack, defense, acc)
 
     json_output = build_json_output(
-        run_dir, data, acc, attack, defense, findings, suggestions
+        run_dir, data, acc, attack, defense, findings, suggestions,
+        research_validity,
     )
 
     json_path = run_dir / "summaries" / "run_analysis.json"

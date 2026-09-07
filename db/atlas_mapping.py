@@ -194,7 +194,7 @@ def lookup_known_vulnerability(attack, defense):
 def is_novel_dimension(attack_mode=None, selection_mode=None,
                        layering_mode=None, onset_round=0,
                        intensity_ramp=1.0):
-    """Check which novel dimensions (0 prior art) this run uses."""
+    """Return candidate dimensions with no match in the recorded corpus search."""
     kb = _load_kb()
     active = []
     for nd in kb.get("novel_dimensions", []):
@@ -654,13 +654,16 @@ def classify_finding(pattern, defense, attack, accuracy_drop=None,
         )
     elif novelty == "candidate_new":
         rationale_parts.append(
-            f"NOVEL (0 matches in {len(kb.get('known_vulnerabilities', []))}-entry KB). "
-            f"{pattern} for {defense} under {attack}."
+            f"CANDIDATE NEW (no exact pair match in the local "
+            f"{len(kb.get('known_vulnerabilities', []))}-entry vulnerability KB). "
+            f"{pattern} for {defense} under {attack}; this corpus result is not "
+            f"proof of global novelty."
         )
         if pattern == "adaptive_convergence":
             rationale_parts.append(
                 "MAB-based attack selection converging to defense-specific "
-                "dominant attacks is a novel contribution of this framework."
+                "dominant attacks is a candidate contribution that requires a "
+                "matched adaptive-versus-static comparison."
             )
     else:
         rationale_parts.append(
@@ -760,9 +763,10 @@ def get_novelty_summary():
             "identity helps or hurts the attacker against reputation-based defenses."
         ),
         "delayed_onset": (
-            "No prior work systematically tests delayed-onset attacks where N honest rounds "
-            "build legitimate reputation before the attack begins. This directly tests whether "
-            "trust/reputation defenses can detect behavioral shifts."
+            "No matching work was found in the surveyed corpus that systematically tests "
+            "delayed-onset attacks where N honest rounds build legitimate reputation before "
+            "the attack begins. This tests whether trust/reputation defenses can detect "
+            "behavioral shifts."
         ),
         "intensity_ramping": (
             "Prior attacks use constant intensity. Gradual ramping tests whether defenses "
@@ -1031,9 +1035,9 @@ def _get_mab_insight(defense, attack, kb_matches, novelty):
     elif category == "trust_based":
         return (
             f"The MAB converged to {attack} against {defense} (trust-based). "
-            f"This is a candidate novel finding: the MAB identified an attack "
-            f"that can maintain high trust scores while injecting poison, "
-            f"potentially exposing a gap in the trust scoring mechanism."
+            f"This candidate-new interaction should be tested to determine whether "
+            f"the selected attack maintains high trust while injecting poison; "
+            f"convergence alone does not establish that mechanism."
         )
     return (
         f"The MAB converged to {attack} against {defense}. The autonomous "
@@ -1067,13 +1071,16 @@ def _build_known_summary(defense, attack, kb_matches, papers, novelty):
         return (
             f"Published literature documents {defense} as robust against {attack}. "
             f"If our results show vulnerability here, it may indicate a "
-            f"configuration-specific weakness or a genuinely novel finding."
+            f"configuration-specific weakness or an unexpected result requiring "
+            f"replication and literature review."
         )
     elif novelty == "candidate_new":
+        total_entries = len(_load_kb().get("known_vulnerabilities", []))
         return (
-            f"No prior work in our {len(kb_matches)}-entry knowledge base "
-            f"directly tests this specific {attack} vs {defense} interaction. "
-            f"This is a candidate novel finding that needs confirmation."
+            f"No exact pair among the {total_entries} structured vulnerability "
+            f"entries directly tests this specific {attack} vs {defense} interaction. "
+            f"This is candidate new within the local corpus and needs confirmation "
+            f"and broader literature review."
         )
     return f"Insufficient evidence to determine prior knowledge status."
 
@@ -1086,9 +1093,10 @@ def _build_novelty_summary(defense, attack, pattern, novelty, kb_matches):
     if pattern == "adaptive_convergence":
         return (
             f"The MAB's autonomous convergence to {attack} against {defense} "
-            f"is a novel contribution. No prior work uses an attacker-side "
-            f"multi-armed bandit to discover defense-specific weaknesses "
-            f"without prior knowledge of the defense mechanism."
+            f"is a candidate contribution. In the surveyed corpus, no work uses "
+            f"online learning during FL training to select among a portfolio of "
+            f"heterogeneous poisoning primitives. A matched adaptive-versus-static "
+            f"comparison is still required to establish added discovery value."
         )
     if pattern in ("trust_failure", "poor_trust_separation"):
         return (

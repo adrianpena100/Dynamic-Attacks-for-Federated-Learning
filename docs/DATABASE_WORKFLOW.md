@@ -91,7 +91,7 @@ The database has 13 tables:
 | `client_metrics` | One row per (run, round, client, metric) | `metrics/evaluate_client__*.csv`, `train_client__*.csv` |
 | `attack_events` | One row per (run, round) | `attack_timeline.csv` + `round_attack_stats.csv` |
 | `attack_event_layers` | One row per (run, round, layer) | `attack_log.jsonl` layer_details |
-| `adaptive_attack_scores` | One row per (run, round, attack) | **Not yet logged** (placeholder) |
+| `adaptive_attack_scores` | One row per (run, round, attack) | `summaries/adaptive_bandit_state.csv` |
 | `client_attack_events` | One row per (run, round, client) | `attack_by_client_round.csv` |
 | `trust_metrics` | One row per (run, round, client) | `trust_strategy_by_round.csv` |
 | `defense_selection` | One row per (run, round, client) | `defense_selection_by_round.csv` + trust CSV |
@@ -375,9 +375,21 @@ The agent should generate an analysis page or report from the database after eac
 
 ### Adaptive Attack Scores
 
-25. Add logging to `AttackEngine` so MAB bandit state (reward, estimated_value, times_selected) is written to `attack_log.jsonl` or a separate CSV
-26. Test ingestion of adaptive attack scores from real adaptive runs
-27. Verify the `adaptive_attack_scores` table is populated correctly
+25. ~~Add logging to `AttackEngine` for reward, estimated value, and selection count.~~ **DONE** — written to `summaries/adaptive_bandit_state.csv`.
+26. ~~Test ingestion of adaptive attack scores from real adaptive runs.~~ **DONE** — handled by `db/ingest.py`.
+27. ~~Verify the `adaptive_attack_scores` table is populated correctly.~~ **DONE** — 1,452 rows present as of 2026-08-27.
+
+### Telemetry Semantics
+
+- `defense_selection_by_round.csv` is meaningful only when `defense_strategy`
+  names a selecting defense and `num_selected_by_defense > 0`.
+- Empty files and historical placeholder rows such as `-,0,0,0` mean **not
+  applicable**. They must never be interpreted as successful rejection.
+- `defense_filter_by_round.csv` must be checked separately. `mode=none`,
+  `num_before=num_after`, and `num_rejected=0` means no pre-aggregation filter
+  ran.
+- Trust, selection, and filter summaries now include explicit availability and
+  applicability state in analysis payloads.
 
 ---
 

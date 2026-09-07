@@ -82,15 +82,22 @@ artifact-dir = ""
 # --------------------------------------------------------
 ##                   MODEL ARCHITECTURE                 ##
 # --------------------------------------------------------
-# I choose the model architecture here. Override per run via --run-config 'model="resnet18"'.
+# Normal path: leave this as "auto" and only change `dataset` below. The framework
+# resolves the dataset's modality, channels, and class count, then picks the
+# dataset's default model (DatasetSpec.default_model in pytorchexample/task.py).
 #
-# Supported vision models:
-#   - simple-cnn   (default, small LeNet-style CNN — fast, good for debugging and FEMNIST/MNIST)
-#   - resnet18     (torchvision ResNet-18, no pretrained weights — stronger baseline for CIFAR-10)
+# Model is ALWAYS built with the resolved input channels and num_classes, and the
+# SAME factory is used by both the Flower client and server (no architecture drift).
 #
-# The model is auto-configured for the dataset's input channels and num_classes.
-# Non-vision modalities (text, tabular) use their own models and ignore this field.
-model = "simple-cnn"
+# Supported vision models (expert override — set explicitly to force one):
+#   - auto         (default: dataset-driven; currently simple-cnn for every dataset)
+#   - simple-cnn   (small LeNet-style CNN — fast, dynamic channels/classes/input-size)
+#   - resnet18     (torchvision ResNet-18, adapted for 32x32 — stronger CIFAR baseline)
+#
+# Override per run via --run-config 'model="resnet18"'.
+# Non-vision modalities (text, tabular) use their own models; an explicit vision
+# model on a non-vision dataset now fails fast with a clear error.
+model = "auto"
 
 
 # --------------------------------------------------------
@@ -110,7 +117,8 @@ attack-preset = ""
 # I intentionally use sentinel defaults so they don't override my TOML attack
 # settings unless I explicitly set them on the CLI.
 attack-enabled = ""
-attack-seed = -1
+# Deterministic plain-run default. Sweeps override this per repetition.
+attack-seed = 1337
 attack-malicious-fraction = -1.0
 attack-malicious-fraction-mode = ""
 attack-selection-mode = ""
@@ -258,6 +266,9 @@ num-nodes-to-select = 0
 # Partitioning:
 # - iid (default)
 # - dirichlet (non-IID; controlled by dirichlet-alpha)
+# - natural  (use the dataset's real client identity, e.g. FEMNIST by writer_id;
+#             opt-in and NOT yet validated against a real download — smoke-test first.
+#             num-supernodes must match the number of unique natural ids.)
 dataset = "flwrlabs/femnist"
 dataset-modality = "auto"
 dataset-train-split = "train"
@@ -285,9 +296,11 @@ data-seed = 42
 # --------------------------------------------------------
 # I keep a catalog of dataset options here as a personal reference.
 #
-# When I wire this up later, I can make it so I only change one key like:
-#   dataset = "ylecun/mnist"
-# and the code picks the right preprocessing/model *per modality*.
+# This IS wired up: for the 5 registry vision datasets (cifar10, cifar100, mnist,
+# fashion_mnist, femnist) I only change `dataset` above and the code resolves the
+# modality, channels, class count, preprocessing, and default model automatically.
+# Other catalog entries fall back to HF schema inference (may need column overrides
+# and hf-trust-remote-code=true) and are NOT all verified end-to-end.
 #
 # IID vs non-IID note:
 # - Most datasets can be made IID or non-IID depending on the partitioner I choose.
@@ -372,7 +385,7 @@ emit-client-metrics = true
 
 [tool.flwr.attack]
 enabled = true
-seed = -1
+seed = 1337
 log_level = "INFO"
 
 
@@ -486,8 +499,17 @@ stealth_norm_multiplier = 1.0
 # --------------------------------------------------------
 ##                  MALICIOUS FRACTION                  ##
 # --------------------------------------------------------
-# How I decide what fraction of clients are malicious each round.
-# OPTIONS:
+# THIS is the primary knob for controlling how many clients are poisoned.
+# Set malicious_fraction to the fraction you want (e.g. 0.25 = 25% of
+# clients selected per round are malicious).
+#
+# The framework auto-computes num_malicious_nodes = round(fraction * selected_per_round).
+# For Byzantine-strict defenses, it automatically caps at the defense's limit:
+#   - Bulyan:       max f = (n - 3) // 4   (e.g. 24 out of 100)
+#   - Krum/MultiKrum: max f = (n - 3) // 2  (e.g. 48 out of 100)
+# A warning is printed at startup if capping occurs.
+#
+# OPTIONS for malicious_fraction_mode:
 # - fixed: always use `malicious_fraction`
 # - uniform: sample each round from [min, max]
 # - choice: sample each round from an explicit list
@@ -611,11 +633,11 @@ adaptive_burn_in_rounds = 1
 
 # adaptive_reward_source:
 #   Where the MAB gets its feedback signal.
-#   - "server": centralized test accuracy from evaluate_fn (default, existing behavior).
+#   - "server": centralized test accuracy from evaluate_fn (optional original behavior).
 #     The attacker observes the global model's performance on a held-out test set.
-#   - "client": mean eval metric across malicious clients only.
-#     More realistic — the attacker only observes what its infected clients see
-#     when they evaluate the global model on their own local data.
+#   - "client": mean eval metric across malicious clients that return evaluation
+#     results (current default). The attacker only observes what its compromised
+#     clients see when they evaluate the global model on their own local data.
 adaptive_reward_source = "client"
 
 

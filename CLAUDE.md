@@ -101,8 +101,10 @@ Status: The dashboard exists and is functional but "dashboard persistence" is lo
 | `tests/test_smoke.py` | 37 | TOML config parsing, strategy name registry, model creation, text pipeline, label normalization |
 | `tests/test_framework_plumbing.py` | 52 | TOML round-trip, dataset specs (5 vision + text + tabular + audio), model factory (8 combos), attack config parsing (11 overrides), strategy dispatch (8 strategies + mixin check), AttackEngine instantiation |
 | `tests/test_trust_strategies.py` | 13 | Trust-weighted aggregation for FLTrust, FoolsGold, FLRAM, MAB-RFL |
+| `tests/test_analysis_semantics.py` | 8 | Telemetry availability, research-validity gates, conservative report semantics |
+| `tests/test_knowledge_base.py` | 5 | Literature KB integrity, Markdown synchronization, exact-pair retrieval, conservative novelty wording |
 
-**Total: 102 tests, 0 failures, 0 skips** (with venv Python + torch)
+**Total: 115 tests, 0 failures, 0 skips** (with venv Python + torch; verified 2026-08-27)
 
 Run with: `../myenv/bin/python -m pytest tests/ -v`
 
@@ -363,60 +365,23 @@ Do not treat these as confirmed new vulnerabilities unless the current logs supp
 
 # Current Documentation Files
 
-All files verified as of 2026-07-29:
-
-| File | Status | Purpose |
-|------|--------|---------|
-| `docs/DATABASE_WORKFLOW.md` | EXISTS | End-to-end database-backed vulnerability discovery workflow |
-| `docs/FEMNIST_VULNERABILITY_UPDATE.md` | EXISTS | ATLAS-mapped research findings and candidate failure modes |
-| `docs/vulnerability_pilot_once.conf` | EXISTS | Minimal pilot sweep config (1 attacked scenario) |
-| `docs/thesis_sweeps.conf` | EXISTS | Original thesis sweep config |
-| `docs/thesis_sweeps2.conf` | EXISTS | Full factorial 63-scenario sweep config |
-| `docs/datasets_catalog.md` | EXISTS | Dataset catalog from Flower Datasets — lists supported and future datasets |
-| `docs/how_to_run_llm_sweep_analysis.md` | EXISTS | Instructions for running LLM-based vulnerability analysis |
-| `docs/paper_draft.tex` | EXISTS | IEEE conference paper draft (LaTeX) |
-| `docs/todo.txt` | EXISTS | Thesis experiment and writing plan with status tracking |
-| `docs/reports/vulnerability_report_atlas.md` | EXISTS | Full ATLAS vulnerability report (584 findings from 600 runs) |
-| `docs/updates/` | EXISTS | Date-stamped progress updates (see list below) |
-
-Progress updates (in `docs/updates/`):
-
-| File | Date | Summary |
-|------|------|---------|
-| `2026-06-25.md` | Jun 25 | Initial project setup and architecture |
-| `2026-06-25_model_architecture.md` | Jun 25 | ResNet-18 addition, model dispatch system |
-| `2026-06-26_text_pipeline.md` | Jun 26 | Text modality pipeline (Sentiment140) |
-| `2026-07-01_database_ingestion.md` | Jul 1 | DB ingestion pipeline for real sweep data |
-| `2026-07-14_atlas_analysis.md` | Jul 14 | MITRE ATLAS analysis pipeline + vulnerability report |
-| `2026-07-26_plumbing_audit.md` | Jul 26 | Framework plumbing audit, 52-test suite, data ingestion (600 runs), ATLAS findings (584), research citations |
-| `2026-07-29.md` | Jul 29 | Test hardening (102/102 pass), baseline validation, ATLAS expansion (11 techniques), plug-and-play strategy params, new literature |
-| `2026-08-03.md` | Aug 3 | Post-run terminal analysis with defense-specific suggestions, run.sh integration, verified against 3 real runs |
-
-Database files:
-
-| File | Status | Purpose |
-|------|--------|---------|
-| `db/schema.sql` | EXISTS | SQLite DDL with source-data comments (13 tables) |
-| `db/create_db.py` | EXISTS | Creates DB + inserts dummy data |
-| `db/ingest.py` | EXISTS | Ingests real sweep CSV outputs into the database |
-| `db/analyze.py` | EXISTS | ATLAS-mapped vulnerability analysis engine |
-| `db/atlas_mapping.py` | EXISTS | MITRE ATLAS technique registry (11 techniques), finding classifier, literature cross-reference |
-| `db/queries.py` | EXISTS | 11 vulnerability discovery query functions |
-| `db/validate.py` | EXISTS | End-to-end smoke test (WARNING: destructively recreates DB — do NOT run after ingesting real data) |
-| `db/dynamic_fl.sqlite` | EXISTS | Database with 600 real runs (252 FEMNIST + 320 MNIST + 22 pilot + 6 dummy) |
-
-Other top-level files:
+Key docs an agent needs to find (see also `db/` for the schema/ingestion scripts):
 
 | File | Purpose |
 |------|---------|
-| `pyproject.toml` | Build config, Flower federation settings, all experiment parameters |
-| `README.md` | Project readme |
-| `femnist_sweep_analysis.ipynb` | Jupyter notebook — FEMNIST sweep analysis and visualization |
-| `thesis_sweep_analysis.ipynb` | Jupyter notebook — thesis-wide sweep analysis |
-| `sweep_run.log` | ~25MB log from a previous full sweep run |
-| `final_model.pt` | Saved model checkpoint |
-| `.env` | Environment variables (API keys, etc. — gitignored) |
-| `.gitignore` | Ignores: logs/, .env, final_model.pt, paper_draft.tex, sweep configs, notebooks |
+| `docs/DATABASE_WORKFLOW.md` | End-to-end database workflow, schema, CSV mapping, run layout |
+| `docs/EXPERIMENT_PLAN.md` | 6-phase experiment plan (thesis proposal) |
+| `docs/FEMNIST_VULNERABILITY_UPDATE.md` | ATLAS-mapped findings and candidate failure modes |
+| `docs/NOVELTY_MAP.md` | Literature/novelty snapshot of the 205-paper KB |
+| `docs/paper_draft.tex` | IEEE conference paper draft |
+| `docs/vulnerability_pilot_once.conf` | Minimal pilot sweep config (1 attacked scenario) |
+| `docs/thesis_sweeps.conf`, `thesis_sweeps2.conf` | Full sweep configs (do not use for pilots) |
+| `docs/reports/vulnerability_report_atlas.md` | Global ATLAS vulnerability report |
+
+Date-stamped progress updates live in `docs/updates/` (`ls` to see them; read the
+latest to catch up). Top-level artifacts: `pyproject.toml` (all experiment params),
+`README.md`, the two analysis notebooks, and `final_model.pt` (legacy fallback;
+runner-managed runs save `checkpoints/final_model.pt` per run dir).
 
 If asked to update professor-facing status, update docs/FEMNIST_VULNERABILITY_UPDATE.md or create a concise new update file.
 
@@ -433,246 +398,48 @@ When the user asks to "update the progress" or "write an update":
 
 The project uses a SQLite database to support agent-driven vulnerability discovery. Full documentation is in `docs/DATABASE_WORKFLOW.md`.
 
-## Workflow Summary
+## Schema, Workflow, and CSV Mapping
 
-1. Run experiment sweeps via `run_thesis_sweep.sh`
-2. Sweeps produce CSV/log artifacts per run (metrics, attack timelines, trust scores, defense selection)
-3. Ingestion scripts (to be built) read those artifacts into the database
-4. Agent queries the database to identify weakness patterns
-5. Agent maps findings to MITRE ATLAS categories when possible
-6. Agent generates an analysis report
-7. Agent suggests next sweeps or follow-up experiments
+The full 9-step workflow, the 13-table schema, the CSV-to-table ingestion mapping,
+the run-directory layout, and the sweep-data inventory all live in
+**`docs/DATABASE_WORKFLOW.md`** (and `db/schema.sql`). Do not duplicate them here —
+update that doc if the schema or mapping changes.
 
-## Database Schema
+Ingestion gotchas that are easy to miss (also in DATABASE_WORKFLOW.md):
+- Layered attack names are `+`-joined strings (e.g. `"gaussian_noise+sign_flip"`).
+- `trust_strategy_by_round.csv` `details_json` has commas replaced with semicolons — reverse before JSON parsing.
+- `defense_selection_by_round.csv` (krum/bulyan only) has semicolon-separated client-ID lists that expand into one row per client.
+- Client IDs differ across CSVs; use `client_number_map.csv` to map `client_number` ↔ `src_node_id`.
 
-13 tables in `db/schema.sql`:
-- `sweeps` — one row per sweep execution
-- `runs` — one row per run (includes attack/defense config at run level)
-- `run_config` — EAV overflow for extra config keys
-- `round_metrics` — server-level metrics per round (EAV: run, round, metric_name, value)
-- `client_metrics` — per-client per-round metrics (EAV)
-- `attack_events` — one row per round, round-level attack state with norm/stealth data
-- `attack_event_layers` — per-layer detail for stacked attacks (from JSONL)
-- `adaptive_attack_scores` — MAB bandit state per round (**placeholder, not yet logged**)
-- `client_attack_events` — per-client per-round attack assignment with full parameters
-- `trust_metrics` — per-client per-round trust/reputation scores (trust strategies only)
-- `defense_selection` — per-client per-round aggregation selection decisions
-- `baseline_comparisons` — pre-computed attacked vs clean drops
-- `agent_recommendations` — agent-generated experiment suggestions
-
-## Key Design Facts
-
-- Attack names for layered attacks are `+`-joined strings (e.g. `"gaussian_noise+sign_flip"`), matching the source CSVs
-- `attack_mode`, `selection_mode`, `layering_mode` are run-level config in the `runs` table, not per-round
-- Trust metrics have common flat columns plus `details_json` for strategy-specific fields
-- `defense_selection` is unified across krum-family and trust strategies
-- The `adaptive_attack_scores` table requires logging changes to `AttackEngine` before it can be populated from real runs
-
-## Database Files
-
-| File | Purpose |
-|------|---------|
-| `db/schema.sql` | SQLite DDL with source-data comments |
-| `db/create_db.py` | Creates DB + inserts dummy data |
-| `db/queries.py` | 11 vulnerability discovery query functions |
-| `db/validate.py` | End-to-end smoke test |
-| `db/dynamic_fl.sqlite` | Dummy database (regenerated by create_db.py) |
-
-## CSV-to-Table Mapping
-
-This is the mapping from run output files to database tables. Critical for building the ingestion script.
-
-| CSV / Source File | Database Table | Granularity |
-|---|---|---|
-| sweep directory metadata + `sweep_settings.csv` | `sweeps` | One row per sweep |
-| `meta.json` + `sweep_settings.csv` row | `runs` | One row per run |
-| `meta.json` → `resolved_config_for_naming` | `run_config` | Key-value pairs per run |
-| `metrics/evaluate_server__*.csv` | `round_metrics` | One row per (run, round, metric) |
-| `metrics/evaluate_client__*.csv`, `train_client__*.csv` | `client_metrics` | One row per (run, round, client, metric) |
-| `summaries/attack_timeline.csv` + `round_attack_stats.csv` | `attack_events` | One row per (run, round) |
-| `summaries/attack_log.jsonl` → `attack_details.layer_details` | `attack_event_layers` | One row per (run, round, layer) |
-| **NOT YET LOGGED** — needs AttackEngine changes | `adaptive_attack_scores` | Placeholder |
-| `summaries/attack_by_client_round.csv` | `client_attack_events` | One row per (run, round, client) |
-| `summaries/trust_strategy_by_round.csv` | `trust_metrics` | One row per (run, round, client) — trust strategies only |
-| `defense_selection_by_round.csv` (krum/bulyan) + trust CSV `selected_for_aggregation` | `defense_selection` | One row per (run, round, client) |
-| Computed from `round_metrics` pairs | `baseline_comparisons` | One row per (attacked_run, baseline_run) |
-| Agent output | `agent_recommendations` | One row per recommendation |
-
-All server metric CSVs have 2 columns: `round, value`. One file per metric name (e.g. `evaluate_server__accuracy.csv`, `evaluate_server__f1_macro.csv`).
-
-The `trust_strategy_by_round.csv` columns: `round, strategy, client_id, trust_score, selected_for_aggregation, update_norm, cosine_to_center, history_score, reputation, num_examples, details_json`. The `details_json` column has commas replaced with semicolons to avoid CSV breakage — must reverse this before JSON parsing.
-
-The `defense_selection_by_round.csv` is only written for krum/multikrum/bulyan. Its `selected_client_ids` and `selected_client_numbers` columns are semicolon-separated lists that must be expanded into individual rows during ingestion.
-
-Client IDs: `trust_strategy_by_round.csv` uses raw Flower node IDs. `attack_by_client_round.csv` uses both `client_number` (1-based) and `src_node_id`. Use `client_number_map.csv` for mapping.
-
-## Run Directory Layout
-
-Each run (when launched through a sweep) produces this structure:
-
-```
-logs/sweeps/<sweep_name>/
-  sweep_settings.csv                     # one row per run in the sweep
-  sweep_summary.txt                      # text summary of sweep results
-  <scenario>__<strategy>__<dataset>__<iid|noniid>__<timestamp>/
-    meta.json                            # full resolved config
-    stdout.log                           # captured stdout
-    stderr.log                           # captured stderr
-    configs/
-      activated_overrides.toml           # override settings for this run
-      activated_run_config.txt           # resolved run config
-      pyproject.snapshot.toml            # frozen pyproject.toml at run time
-    metrics/
-      evaluate_server__accuracy.csv      # round, value (2-column format)
-      evaluate_server__loss.csv
-      evaluate_server__f1_macro.csv
-      evaluate_server__f1_weighted.csv
-      evaluate_server__precision_macro.csv
-      evaluate_server__precision_weighted.csv
-      evaluate_server__recall_macro.csv
-      evaluate_server__recall_weighted.csv
-      evaluate_server__backdoor_asr.csv
-      evaluate_server__backdoor_loss.csv
-      evaluate_server__class_*_accuracy.csv  # per-class (62 for FEMNIST)
-      evaluate_client__eval_acc.csv
-      evaluate_client__eval_loss.csv
-      train_client__train_loss.csv
-      train_client__attack_is_malicious.csv
-      train_client__poisoned_examples.csv
-      train_client__poisoned_backdoor_examples.csv
-      train_client__poisoned_label_flip_examples.csv
-      train_client__poison_examples_seen.csv
-      metrics.json                       # aggregated metrics JSON
-      per_client_color_key.csv           # color assignments for plots
-      per_client_color_key.json
-      per_client_metrics.json
-      rounds.json                        # per-round metric history
-      sampling.csv                       # client sampling record
-    summaries/
-      attack_timeline.csv
-      attack_by_client_round.csv
-      attack_log.jsonl
-      attack_summary.md                  # human-readable attack summary
-      round_attack_stats.csv
-      malicious_clients_by_round.csv
-      round_poison_stats.csv
-      poisoning_by_client_round.csv
-      defense_filter_by_round.csv
-      defense_selection_by_round.csv     # krum/bulyan only
-      trust_strategy_by_round.csv        # trust strategies only
-      defense_malicious_selected_vs_sampled.png  # visualization
-      client_number_map.csv
-      run_config_and_summary.json
-      plots/                             # additional summary plots
-    graphs/
-      aggregated_client/                 # aggregated client metric plots
-      aggregated_server/                 # aggregated server metric plots
-      diagnostics/                       # diagnostic visualizations
-      per_client/                        # per-client metric plots
-      summaries/                         # summary visualizations
-    rounds/
-      round_001.json                     # per-round state snapshots
-      round_002.json
-      ...
-```
-
-Standalone dev/debug runs (launched directly, not through a sweep) go under `logs/` directly with the same internal structure but without the sweep wrapper.
-
-## Existing Sweep Data Inventory
-
-As of 2026-06-25:
-
-| Sweep | Location | Strategies | Runs per Strategy | Status |
-|-------|----------|------------|-------------------|--------|
-| FEMNIST full | `logs/sweeps/FEMNIST_2026-04-02/` | bulyan, fedmedian, fedtrimmedavg, fltrust, multikrum | ~67 each | Completed. Contains `llm_global_analysis.md`. |
-| MNIST full | `logs/sweeps/MNIST_2026-04-02/` | bulyan, fedmedian, fedtrimmedavg, fltrust, multikrum | varies | Completed. Contains analysis CSVs and `llm_global_analysis.md`. |
-| Pilot v1 (bulyan) | `logs/sweeps/bulyan_pilot_vuln__2026-05-01_03-46-10/` | bulyan | 2 (baseline + attacked) | Completed |
-| Pilot v1 (fedmedian) | `logs/sweeps/fedmedian_pilot_vuln__*03-46-10/` | fedmedian | 2 | Completed |
-| Pilot v1 (fedtrimmedavg) | `logs/sweeps/fedtrimmedavg_pilot_vuln__*03-46-10/` | fedtrimmedavg | 2 | Completed |
-| Pilot v1 (fltrust) | `logs/sweeps/fltrust_pilot_vuln__*03-46-10/` | fltrust | 2 | Completed |
-| Pilot v1 (foolsgold) | `logs/sweeps/foolsgold_pilot_vuln__*03-46-10/` | foolsgold | 2 | Completed |
-| Pilot v1 (flram) | `logs/sweeps/flram_pilot_vuln__*03-46-10/` | flram | 2 | Completed |
-| Pilot v1 (mab-rfl) | `logs/sweeps/mab-rfl_pilot_vuln__*03-46-10/` | mab-rfl | 2 | Completed |
-| Pilot v1 (multikrum) | `logs/sweeps/multikrum_pilot_vuln__*03-46-10/` | multikrum | 2 | Completed |
-| Pilot v2 (fedmedian) | `logs/sweeps/fedmedian_pilot_vuln_v2__*09-25-22/` | fedmedian | 2 | Completed |
-| Pilot v2 (fedtrimmedavg) | `logs/sweeps/fedtrimmedavg_pilot_vuln_v2__*09-25-22/` | fedtrimmedavg | 2 | Completed |
-| Pilot v2 (fltrust) | `logs/sweeps/fltrust_pilot_vuln_v2__*09-25-22/` | fltrust | 2 | Completed |
-| Pilot v2 (flram) | `logs/sweeps/flram_pilot_vuln_v2__*09-25-22/` | flram | 0 runs | FAILED/EMPTY |
-| Pilot v2 (foolsgold) | `logs/sweeps/foolsgold_pilot_vuln_v2__*09-25-22/` | foolsgold | 0 runs | FAILED/EMPTY |
-| Pilot v2 (mab-rfl) | `logs/sweeps/mab-rfl_pilot_vuln_v2__*09-25-22/` | mab-rfl | 0 runs | FAILED/EMPTY |
-
-Additionally, ~35 standalone dev/debug runs exist directly under `logs/` (mostly flram, fltrust, foolsgold, mab-rfl FEMNIST runs from April-May 2026, plus one MNIST fedavg run).
+Current sweep data: FEMNIST full + MNIST full (Apr 2026), pilot v1 (all 8 strategies)
+and partial pilot v2 under `logs/sweeps/`, plus ~35 standalone dev runs under `logs/`.
+See `docs/updates/2026-08-13.md` for the inventory. MNIST full has 0 clean baselines.
 
 ## Testing Status
 
-**Unit tests (2026-07-29): 102 passed, 0 failed, 0 skipped**
-- Run with `../myenv/bin/python -m pytest tests/ -v`
-- Covers: TOML config, dataset specs, model factories, attack config parsing, strategy dispatch, trust aggregation
-
-**Database — Real data ingestion DONE (2026-07-26):**
-- 600 runs ingested (252 FEMNIST + 320 MNIST + 22 pilot + 6 dummy)
-- 116,160 round metric rows, 17,490 attack event rows, 1,736,400 client attack rows
-- 622 baseline comparison pairs computed
-- ATLAS vulnerability analysis run: 584 findings, 11 candidate novel
-
-**Database — dummy validation PASSED (2026-05-22):**
-- Schema creation, dummy insertion, 11 queries, FK integrity — all passed
-
-**WARNING:** Never run `db/validate.py` after ingesting real data — it destructively recreates the DB with dummy data.
+- **Unit tests: 115 passed, 0 failed, 0 skipped** (venv Python + torch). Run with `../myenv/bin/python -m pytest tests/ -v`.
+- **Real data ingestion DONE:** 606 run rows (324 MNIST + 282 FEMNIST), 622 baseline comparison pairs, 1,452 adaptive-score rows.
+- **Dummy validation PASSED:** schema creation, dummy insertion, 11 queries, FK integrity.
+- **WARNING:** Never run `db/validate.py` after ingesting real data — it destructively recreates the DB with dummy data.
 
 ## Remaining Work
 
-Experiment gaps:
-1. **MNIST clean baselines** — 320 attacked runs, 0 baselines. Must run clean baseline sweeps.
-2. **Multi-seed replication** — All runs single-seed (1337). Need 3+ seeds for statistical claims.
-3. **FLTrust stress test** — Increase malicious fraction beyond 30%.
-4. **IID control experiments** — Separate non-IID effects from attack effects.
-5. **More rounds** — Current runs use 30 rounds; 100-200 would improve convergence and clean accuracy.
+Experiment gaps (research-critical, tracked in `docs/EXPERIMENT_PLAN.md`):
+1. **MNIST clean baselines** — 320 attacked runs, 0 baselines.
+2. **Multi-seed replication** — all runs single-seed (1337); need 3+ seeds.
+3. **Fixed-primitive controls** (`attack_mode=phase`) — 0 exist; required for the adaptive-vs-static claim.
+4. **Re-run FEMNIST baselines** — old ones used wrong `num-malicious-nodes`.
+5. **IID controls** and **more rounds** (100–200 vs current 30).
 
-Infrastructure:
-6. Add MAB bandit state logging to AttackEngine (adaptive_attack_scores table is placeholder)
-7. Test with a new FL strategy not in the database (plug-and-play validation)
-8. Multi-seed confidence intervals in baseline_comparisons
+Infrastructure: plug-and-play validation with a strategy not in the DB; multi-seed confidence intervals in `baseline_comparisons`.
 
-## Vulnerability Discovery Patterns
+## Discovery Patterns, ATLAS Mapping, Plug-and-Play
 
-The agent should query the database looking for these patterns:
-
-| Pattern | What to query | Key tables |
-|---|---|---|
-| Attack effectiveness | Largest accuracy/F1 drops per attack | baseline_comparisons, round_metrics |
-| Defense failure | Defense with worst drops under specific attacks | baseline_comparisons, attack_events |
-| Malicious client survival | Malicious clients with selected_for_aggregation = 1 | defense_selection, client_attack_events |
-| Trust score failure | Malicious clients with high trust_score or effective_weight | trust_metrics, client_attack_events |
-| Slipthrough rate | Fraction of malicious clients selected vs total malicious | defense_selection |
-| Adaptive convergence | Which attack the MAB converged to per defense | attack_events grouped by strategy |
-| Collapse | attacked_final_accuracy < 0.05 | baseline_comparisons |
-| Failed recovery | Accuracy drops and never recovers within round budget | round_metrics time series |
-| Non-IID sensitivity | Defense failure even on clean baselines | round_metrics for baseline runs |
-| Strategy-specific weakness | Different dominant attacks per defense | attack_events grouped by strategy |
-
-Each finding should be classified as: known weakness, repeated/confirmed vulnerability, new or previously unobserved failure, or hypothesis needing more testing.
-
-## MITRE ATLAS Mapping Rules
-
-When the agent maps a finding to a MITRE ATLAS category:
-- Do not claim a mapping if it does not clearly fit
-- If uncertain, mark as tentative
-- If project-specific, label as candidate vulnerability or observed weakness
-- Distinguish known adversarial ML behavior from new evidence
-- Never say "new MITRE ATLAS vulnerability discovered"
-
-## Plug-and-Play Strategy Testing
-
-To test a new FL strategy:
-1. Implement it in server_app.py (extend AttackInjectedStrategyMixin)
-2. Run adversarial sweeps with run_thesis_sweep.sh
-3. Strategy produces the same CSV output columns as existing strategies
-4. Ingest CSVs into the database
-5. Agent analyzes the new strategy alongside existing ones
-6. Receive a vulnerability report
-
-The schema, ingestion, queries, and analysis workflow stay the same. Only the strategy implementation changes.
+The vulnerability-discovery query patterns, MITRE ATLAS mapping rules, and the
+plug-and-play new-strategy workflow are documented in **`docs/DATABASE_WORKFLOW.md`**.
+Core rule that always applies: never say "new MITRE ATLAS vulnerability discovered" —
+mark uncertain mappings tentative and label project-specific results as candidate
+vulnerabilities or observed weaknesses.
 
 ## Rules
 
@@ -752,39 +519,16 @@ When possible, verify changes by running:
 
 # Current Priority Order
 
-Research-validity priority order:
-1. ~~Verify clean baselines exist and are matched to attacked runs.~~ **DONE** — 26 FEMNIST baselines across all 8 strategies verified in DB. MNIST has 0 baselines (gap).
-2. ~~Verify trust/reputation defenses use explicit fair settings.~~ **DONE**
-3. ~~Add scalar F1/precision/recall metrics.~~ **DONE** — all scalar metrics confirmed in pilot run outputs.
-4. ~~Fix small reproducibility issues such as global seeding and Dirichlet seed.~~ **DONE** — DirichletPartitioner seed configurable via `data-seed`.
-5. ~~Run small pilot sweeps before full sweeps.~~ **DONE** — pilot v1 completed for all 8 strategies.
-6. ~~Analyze baseline vs attacked drops.~~ **DONE** — 622 baseline comparisons in DB, ATLAS analysis run (584 findings).
-7. **Re-run FEMNIST baselines with fixed params** — old baselines used hardcoded `num-malicious-nodes=25`, causing Bulyan/MultiKrum/FedTrimmedAvg/FedMedian to filter honest clients. Auto-compute fix is in place; baselines need re-running.
-8. **Add multiple seeds** — still single-seed (1337). Need 3+ seeds for statistical claims.
-9. ~~Build CSV ingestion script.~~ **DONE** — `db/ingest.py` ingested 600 runs.
-10. ~~Test database schema against real CSV outputs.~~ **DONE** — all CSV columns mapped.
-11. ~~Build agent analysis report generation.~~ **DONE** — `db/analyze.py` + `db/atlas_mapping.py`.
-12. **Run MNIST clean baselines** — 320 attacked runs have 0 baselines.
-13. **Run experiments with more rounds** (100-200) to improve clean accuracy (currently 30 rounds).
-14. **IID control experiments** — separate non-IID effects from attack effects.
+Research-validity (open items — completed steps are recorded in `docs/updates/`):
+1. **Re-run FEMNIST baselines with fixed params** — old baselines used hardcoded `num-malicious-nodes=25`, causing filter defenses (Bulyan/MultiKrum/FedTrimmedAvg/FedMedian) to exclude honest clients. Auto-compute fix is in place; baselines need re-running.
+2. **Add multiple seeds** — still single-seed (1337); need 3+ for statistical claims.
+3. **Run MNIST clean baselines** — 320 attacked runs have 0 baselines.
+4. **Add fixed-primitive controls** (`attack_mode=phase`) — required for the adaptive-vs-static comparison.
+5. **More rounds** (100–200 vs current 30) and **IID controls** to separate non-IID effects from attack effects.
 
-Database/workflow priority:
-1. ~~Build ingestion script~~ **DONE**
-2. ~~Test ingestion on real sweeps~~ **DONE** — 600 runs ingested
-3. ~~Build report generation~~ **DONE** — ATLAS analysis pipeline
-4. Add MAB bandit state logging to AttackEngine
-5. Test multi-seed baseline comparisons
+Database/workflow: add multi-seed confidence intervals to `baseline_comparisons`; validate plug-and-play with a strategy not yet in the DB.
 
-Lower priority / do later:
-- splitting task.py
-- strategy registry refactor
-- dashboard persistence
-- ~~text/audio model improvements~~ **Text pipeline DONE**. Audio still scaffolded only.
-- CIFAR-100 experiments
-- ~~ResNet or larger model additions~~ **DONE**
-- ~~Plug-and-play strategy params~~ **DONE** — auto-compute num-malicious-nodes and num-nodes-to-select
-- ~~Post-run terminal analysis~~ **DONE** — `scripts/post_run_analysis.py` detects 8 patterns, generates defense-specific suggestions, wired into `run.sh`
-- **Test the suggestion loop end-to-end** — pick one defense, apply suggested param changes, re-run, verify improvement
+Lower priority / do later: splitting `task.py`, strategy-registry refactor, dashboard persistence, CIFAR-100 experiments, audio model (still scaffolded only), and testing the suggestion loop end-to-end (apply suggested params, re-run, verify improvement).
 
 # Communication Style
 

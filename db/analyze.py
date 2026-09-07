@@ -495,14 +495,56 @@ def generate_report(conn, findings):
     ).fetchall()
     strategy_list = [s[0] for s in strategies]
     total_comparisons = conn.execute("SELECT COUNT(*) FROM baseline_comparisons").fetchone()[0]
+    datasets = conn.execute(
+        "SELECT dataset, COUNT(*) FROM runs GROUP BY dataset ORDER BY dataset"
+    ).fetchall()
+    max_seeds_per_config = conn.execute(
+        """
+        SELECT COALESCE(MAX(seed_count), 0) FROM (
+            SELECT COUNT(DISTINCT seed) AS seed_count
+            FROM runs
+            GROUP BY strategy, dataset, partitioner, dirichlet_alpha,
+                     is_baseline, attack_mode, selection_mode, layering_mode
+        )
+        """
+    ).fetchone()[0]
+    fixed_control_count = conn.execute(
+        "SELECT COUNT(*) FROM runs WHERE attack_enabled = 1 AND attack_mode = 'phase'"
+    ).fetchone()[0]
 
     lines.append("## Database Summary")
     lines.append("")
     lines.append(f"- **Runs ingested:** {total_runs}")
     lines.append(f"- **Strategies tested:** {', '.join(strategy_list)}")
     lines.append(f"- **Baseline comparisons:** {total_comparisons}")
-    lines.append(f"- **Dataset:** FEMNIST (non-IID, Dirichlet)")
-    lines.append(f"- **Seeds per config:** 1 (pilot — needs replication)")
+    lines.append(
+        "- **Datasets:** " + ", ".join(f"{name} ({count} runs)" for name, count in datasets)
+    )
+    lines.append(f"- **Maximum distinct seeds in a matched configuration:** {max_seeds_per_config}")
+    lines.append(f"- **Fixed primitive control runs (`attack_mode=phase`):** {fixed_control_count}")
+    lines.append("")
+
+    lines.append("## Evidence Policy")
+    lines.append("")
+    lines.append(
+        "This report contains candidate observations. A finding is not replicated unless "
+        "the same matched configuration has at least three seeds. Attack-caused degradation "
+        "requires a matched clean baseline, and adaptive superiority requires matched fixed "
+        "primitive controls. Candidate novelty means only that the interaction was not found "
+        "in the current knowledge base; it is not confirmed novelty."
+    )
+    if max_seeds_per_config < 3:
+        lines.append("")
+        lines.append(
+            f"**Current gate:** no configuration reaches the three-seed requirement "
+            f"(maximum observed: {max_seeds_per_config}). Cross-seed claims remain preliminary."
+        )
+    if fixed_control_count == 0:
+        lines.append("")
+        lines.append(
+            "**Current gate:** no fixed primitive control runs are stored, so the database "
+            "cannot support a claim that adaptive MAB outperforms fixed attacks."
+        )
     lines.append("")
 
     # --- Executive summary ---
@@ -821,7 +863,8 @@ def _generate_finding_narrative(finding, ctx):
         elif novelty == "candidate_new":
             narrative += (
                 "This attack-defense combination has no direct prior literature match "
-                "and may represent a candidate novel finding. "
+                "in the local corpus and is a candidate for validation and broader "
+                "literature review. "
             )
         if ctx["assumptions_exploited"]:
             narrative += (
@@ -847,7 +890,8 @@ def _generate_finding_narrative(finding, ctx):
             f"The MAB attack engine converged to {attack} as the dominant attack "
             f"against {strategy} ({fraction:.0%} selection rate). "
             f"This defense fingerprinting — where different defenses elicit different "
-            f"dominant attacks — is a novel contribution of this framework."
+            f"dominant attacks — is a candidate interaction to compare against matched "
+            f"fixed-attack runs; convergence alone does not establish novelty or causality."
         )
         return narrative
 

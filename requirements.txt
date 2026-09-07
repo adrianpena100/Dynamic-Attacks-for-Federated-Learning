@@ -1,0 +1,45 @@
+# Core FL framework
+flwr[simulation]==1.25.0
+flwr-datasets[vision]==0.5.0
+
+# Deep learning
+# NOTE: On HPC (CUDA 11.6), replace these two lines with:
+#   pip install torch==2.0.1+cu116 torchvision==0.15.2+cu116 \
+#       --extra-index-url https://download.pytorch.org/whl/cu116
+torch==2.8.0
+torchvision==0.23.0
+
+# Data / ML utilities
+numpy==2.2.6
+pandas==2.3.5
+scikit-learn==1.7.2
+scipy==1.15.3
+datasets==3.1.0
+huggingface_hub==1.3.3
+pillow==12.1.0
+tqdm==4.67.1
+openpyxl==3.1.5
+
+# Plotting and reporting
+matplotlib==3.10.8
+nbformat==5.10.4
+nbconvert==7.17.0
+ipykernel==7.2.0
+jupyterlab==4.5.5
+
+# Config / serialization
+tomli==2.4.0
+tomli_w==1.2.0
+psutil==7.2.2
+
+# Dashboard (optional)
+fastapi==0.136.0
+uvicorn==0.44.0
+
+# LLM analysis (optional — needs ANTHROPIC_API_KEY)
+anthropic==0.94.1
+
+# gRPC (pulled in by Flower, pinned for compatibility)
+grpcio==1.76.0
+grpcio-health-checking==1.76.0
+protobuf==6.33.4

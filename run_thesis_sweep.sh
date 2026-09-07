@@ -481,7 +481,7 @@ for strategy_name in "${RUN_STRATEGIES[@]}"; do
   fi
 
   for entry in "${SWEEPS[@]}"; do
-    IFS="|" read -r label start_round end_round ramp_end attack_mode selection_mode churn_fraction layering_mode layered_k layered_attacks layer_mult <<<"$entry"
+    IFS="|" read -r label start_round end_round ramp_end attack_mode selection_mode churn_fraction layering_mode layered_k layered_attacks layer_mult attack_preset <<<"$entry"
 
     if [[ "$start_emitting" -ne 1 ]]; then
       if [[ "$label" == "$FROM_LABEL" ]]; then
@@ -531,6 +531,9 @@ for strategy_name in "${RUN_STRATEGIES[@]}"; do
     fi
     if [[ -n "$EXTRA_CONFIG" ]]; then
       run_config+=" ${EXTRA_CONFIG}"
+    fi
+    if [[ -n "${attack_preset}" ]]; then
+      run_config+=" attack-preset=\"${attack_preset}\""
     fi
 
     run_config+=" strategy=\"${strategy_name}\""

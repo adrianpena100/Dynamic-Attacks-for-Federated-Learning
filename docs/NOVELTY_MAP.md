@@ -1,18 +1,45 @@
 # Novelty Map: Prior Art Coverage Matrix for FL Attack-Defense Evaluation
 
 > **Purpose:** Systematic comparison of our framework's capabilities against published FL robustness literature.  
-> Map each finding to: (a) prior work that covers it, (b) what is genuinely new.  
-> **Last updated:** 2026-08-16  
+> Map each finding to: (a) prior work represented in the local corpus, (b) candidate contributions that still require validation.
+> **Last updated:** 2026-08-27
 > **Papers cataloged:** 205 (96 in-scope Byzantine FL robustness + 109 broader FL security)  
 > **Known vulnerability pairs:** 99  
 > **Coverage:** NeurIPS, ICML, ICLR, USENIX Security, NDSS, IEEE S&P, ACM CCS, RAID, AISTATS, UAI, IJCAI, KDD, CVPR, WACV, MLSys, IEEE TSP, IEEE TBD, WWW, INFOCOM, arXiv
+
+> **Interpretation boundary:** “Candidate new” means that no exact match was found in this bounded local corpus; it is not proof of global novelty. The 99 structured attack-defense pairs cite 43 of the 96 in-scope papers directly. Other papers provide broader tagged context. All 205 records contain an `experimental_results` summary, but metadata depth varies and primary-source verification remains a research responsibility.
+
+---
+
+## How the Literature Store Connects to the Experiment Database
+
+The project uses two separate stores:
+
+| Store | Role |
+|---|---|
+| `db/known_vulnerabilities.json` | Runtime literature knowledge base: paper metadata, `experimental_results` summaries, attack/defense tags, 99 structured pair outcomes, and candidate search dimensions |
+| `db/dynamic_fl.sqlite` | Experiment database: runs, round/client telemetry, baselines, detected findings, and generated `agent_recommendations` |
+
+`db/atlas_mapping.py` loads the JSON, normalizes an observed attack and defense,
+and looks for an exact structured pair. An effective documented pair can produce
+`known_weakness` or `reproduced`; a documented ineffective pair produces
+`known_robust`; and no exact pair produces `candidate_new`. It then attaches the
+papers cited by that pair plus broader papers tagged with the attack or defense.
+The resulting status and rationale are stored with an experiment recommendation
+in SQLite. SQLite does not duplicate the complete paper records.
+
+The classifier performs structured lookup, not semantic full-text review of all
+205 papers. Consequently, a cataloged paper can discuss an interaction without
+controlling classification if that paper has not been linked to a structured
+pair. “Candidate new” must always trigger primary-source review and controlled
+experimental validation.
 
 ---
 
 ## 1. Prior Art Coverage Matrix
 
 Rows = attack types. Columns = defenses. Cells = papers that tested that specific combination.  
-`--` = no prior work found testing this combination.
+`--` = no matching prior work recorded for this combination in the local corpus.
 
 ### 1.1 Standard Attack Primitives
 
@@ -35,7 +62,7 @@ Rows = attack types. Columns = defenses. Cells = papers that tested that specifi
 | **IPM** | Xie19(UAI), Karimireddy21, Karimireddy22, Farhadkhani22, FLPoison25, ByzFL25, SignGuard22, LASA25 | Karimireddy22 | Karimireddy21, Farhadkhani22, FLPoison25, ByzFL25, SignGuard22, LASA25 | Xie19(UAI), Karimireddy21, Farhadkhani22, FLPoison25, ByzFL25 | FLPoison25 | -- | -- | -- |
 | **PoisonedFL** | PoisonedFL25 | -- | PoisonedFL25 | PoisonedFL25 | PoisonedFL25 | -- | -- | -- |
 
-### 1.3 Our Framework-Specific Attack Dimensions (Novel Axes)
+### 1.3 Our Framework-Specific Attack Dimensions (Candidate Axes)
 
 | Attack Dimension | Krum/MultiKrum | Bulyan | TrimmedMean | Median | FLTrust | FoolsGold | FLRAM | MAB-RFL |
 |-----------------|---------------|--------|-------------|--------|---------|-----------|-------|---------|
@@ -52,7 +79,7 @@ Rows = attack types. Columns = defenses. Cells = papers that tested that specifi
 - **Sparsely covered:** FoolsGold — tested in its own paper + FLAME, DeepSight, MESAS, FLPoison
 - **Barely covered:** FLRAM — only tested by its own authors (Chen 2023) with basic attacks
 - **Barely covered:** MAB-RFL — only tested by its own authors (Wan 2022) with basic attacks
-- **Completely empty:** All 5 novel attack dimensions (bottom section) — no prior work at all
+- **No match in the searched subset:** The five grouped framework axes in the bottom section have no matching prior work in the 75-paper novelty search recorded by the knowledge base. This is a corpus-coverage statement, not a universal absence claim.
 
 ---
 
@@ -219,63 +246,63 @@ How many papers test each defense (approximate count from catalog):
 
 ### Key Differentiation
 
-Our framework tests FEWER individual attack primitives (6 vs 15 in FLPoison), but covers **5 orthogonal dimensions that no benchmark touches**:
+Our framework tests fewer individual attack primitives (6 vs 15 in FLPoison), but implements five additional dimensions for which no matching benchmark was found in the recorded search subset:
 
-1. **Adaptive attack-side MAB** — no benchmark has this
-2. **Composite/layered attacks** — no benchmark has this
-3. **Dynamic scheduling** (churn/sticky/random) — no benchmark has this
-4. **Delayed onset** — no benchmark has this
-5. **Intensity ramping** — no benchmark has this
+1. **Adaptive attack-side portfolio selection**
+2. **Composite/layered attacks**
+3. **Dynamic scheduling** (churn/sticky/random)
+4. **Delayed onset**
+5. **Intensity ramping**
 
-Additionally, no benchmark tests **4 trust/reputation defenses** (FLTrust + FoolsGold + FLRAM + MAB-RFL) under a shared abstraction.
+Additionally, no matching benchmark in the recorded subset tests **4 trust/reputation defenses** (FLTrust + FoolsGold + FLRAM + MAB-RFL) under a shared abstraction. Because that abstraction departs from the canonical algorithms, its results characterize the harmonized variants unless reproduced with faithful reference implementations.
 
 ---
 
-## 6. Gap Analysis: What Is Genuinely New
+## 6. Gap Analysis: Candidate Contributions Requiring Validation
 
 ### Gap 1: Attack-side MAB (epsilon-greedy bandit for the attacker) — Automated Assumption Fuzzer
 
-**Status: NO prior work found** (60+ papers surveyed).
+**Status: No matching portfolio-selection work found in the recorded search subset.**
 
-Prior MAB in FL is exclusively **defensive**: MAB-RFL (Wan 2022) uses bandit for client reputation, SARA (Hu 2025) uses bandit for defense selection, FedAA (AAAI 2025) uses RL for aggregation. Wang 2023 uses bandit for data poisoning in autonomous driving, but only for a single attack type against a single defense. RL-based aggregation defense (AAAI 2025) is defense-side, not attack-side.
+Prior MAB use in FL is not exclusively defensive. MAB-RFL (Wan 2022) uses bandit-style reasoning for client reputation, SARA (Hu 2025) uses a bandit for defense selection, and FedAA (AAAI 2025) uses RL for aggregation. Offensively, Wang 2023 uses a bandit to select data samples for poisoning in autonomous-driving FL, Yao 2024 uses Thompson sampling for adversarial-example construction in vertical FL, and Chen 2022 learns a poisoning policy with reinforcement learning. These approaches use different action spaces and threat models from the portfolio selector studied here.
 
-No paper places an epsilon-greedy bandit in the hands of the attacker to select among 6 different poisoning primitives round-by-round based on observed model degradation.
+Within the surveyed corpus, no paper uses online learning during FL training to select round by round among a portfolio of heterogeneous poisoning primitives such as ALIE, sign flip, label flip, and backdoor injection based on observed model degradation.
 
-**The MAB as an automated assumption fuzzer:** Beyond attack selection, the MAB functions as an empirical assumption prober. Each defense rests on stated assumptions (e.g., "honest majority," "Sybil similarity," "IID data"). The MAB does not know these assumptions — it simply tries all available attacks and gravitates toward whichever causes the most damage. When the MAB converges to an attack that happens to violate a specific defense assumption, it has **discovered** that assumption's weakness empirically, without any prior knowledge of the defense's internals. This makes the MAB a genuine vulnerability discovery mechanism, not just an optimization tool (see Section 6.5).
+**The MAB as an assumption-hypothesis generator:** Beyond attack selection, the MAB can prioritize empirical tests of defense assumptions such as honest-majority, Sybil-similarity, or IID assumptions. It does not receive those assumptions or the defense identity; it tries available attacks and updates its selections from scalar feedback. Convergence identifies a candidate interaction. It does not prove which mechanism caused the reward, especially under composite attacks, and it must be followed by matched fixed-attack comparisons and ablations.
 
-**Novelty claim:** "To the best of our knowledge, this is the first framework to employ attacker-side multi-armed bandit selection among diverse poisoning primitives in federated learning. The MAB's convergence patterns serve as an automated assumption fuzzer that can empirically discover defense-specific vulnerabilities."
+**Candidate contribution claim:** “To the best of our knowledge within the surveyed corpus, this is the first framework to use online learning during FL training to select among a portfolio of heterogeneous poisoning primitives. Its convergence patterns generate defense-specific hypotheses for matched comparison and ablation.”
 
-**Confidence:** High — surveyed 60+ papers across all top venues (2017-2026).
+**Confidence:** Corpus-supported, not definitive — the novelty-dimension metadata records 75 papers searched with no match. The broader catalog contains 205 papers, of which 96 are in scope, but absence from this corpus cannot establish universal priority.
 
 ### Gap 2: Multi-layer attack composition
 
-**Status: NO prior work found** for stacking multiple model-poisoning primitives in a single round.
+**Status: No matching work found in the recorded search subset** for stacking multiple model-poisoning primitives in a single round.
 
-DBA (Xie 2020, ICLR) distributes *trigger patterns* for backdoor attacks, but does not stack heterogeneous attack primitives (e.g., gaussian_noise + sign_flip + ALIE). No benchmark (FLPoison, BLADES, BackFed, FedSecurity, ByzFL) evaluates composite attacks.
+DBA (Xie 2020, ICLR) distributes *trigger patterns* for backdoor attacks, but does not stack heterogeneous attack primitives (e.g., gaussian_noise + sign_flip + ALIE). No matching composite-attack evaluation was found in the surveyed benchmark subset (FLPoison, BLADES, BackFed, FedSecurity, ByzFL).
 
-**Novelty claim:** "We introduce multi-layer attack composition, where multiple model poisoning primitives are simultaneously applied to a single client update, and evaluate three layering modes (single, fixed, sample-k) against eight defenses."
+**Candidate contribution claim:** “We implement multi-layer attack composition, where multiple model-poisoning primitives can be applied to one client update, and provide three layering modes (single, fixed, sample-k) for controlled evaluation.” Composite reward attribution remains confounded until component ablations are completed.
 
-**Confidence:** High.
+**Confidence:** Corpus-supported implementation gap; experimental interaction claims remain preliminary.
 
 ### Gap 3: Malicious client scheduling as a configurable attack dimension
 
-**Status: NO prior work found** systematically comparing churn, sticky, and per-round-random scheduling.
+**Status: No matching work found in the recorded search subset** systematically comparing churn, sticky, and per-round-random scheduling.
 
-Bagdasaryan 2020 briefly compares one-shot vs repeated injection. Sun 2019 tests fixed-frequency vs random sampling. Neurotoxin (Zhang 2022, ICML) uses intermittent attacker participation for durability. But NO paper treats malicious client scheduling mode as an explicit, swept attack parameter comparing churn vs sticky vs per-round-random across defenses.
+Bagdasaryan 2020 briefly compares one-shot vs repeated injection. Sun 2019 tests fixed-frequency vs random sampling. Neurotoxin (Zhang 2022, ICML) uses intermittent attacker participation for durability. No matching paper in the recorded search subset treats malicious-client scheduling as an explicit swept parameter comparing churn, sticky, and per-round-random assignment across defenses.
 
-**Novelty claim:** "We systematically evaluate the impact of malicious client scheduling — churn, sticky, and per-round-random — as an attacker-controlled dimension, showing scheduling mode changes the dominant attack per defense."
+**Candidate contribution claim:** “We expose malicious-client scheduling—churn, sticky, and per-round-random—as an attacker-controlled dimension and test whether it changes attack selection and outcomes under matched conditions.”
 
-**Confidence:** High.
+**Confidence:** Corpus-supported design gap; current outcome patterns are single-seed observations.
 
 ### Gap 4: Delayed onset + intensity ramping
 
-**Status: NO prior work found** combining both as configurable sweep parameters.
+**Status: No matching work found in the recorded search subset** combining both as configurable sweep parameters.
 
-PoisonedFL (Xie 2025) uses multi-round consistency and dynamic magnitude adjustment, but this is an attack algorithm property, not a configurable sweep parameter. No paper provides onset time and ramp rate as independently tunable dimensions tested across multiple defenses.
+PoisonedFL (Xie 2025) uses multi-round consistency and dynamic magnitude adjustment, but this is an attack-algorithm property rather than the same configurable sweep design. No matching paper in the recorded search subset exposes onset time and ramp rate as independently tunable dimensions across multiple defenses.
 
-**Novelty claim:** "We evaluate delayed-onset attacks with configurable intensity ramping, showing that onset timing shifts the dominant attack for some defenses."
+**Candidate contribution claim:** “We expose delayed onset and intensity ramping as independently configurable axes and test whether timing changes attack selection and outcomes.”
 
-**Confidence:** High.
+**Confidence:** Corpus-supported design gap; causal timing effects require matched ablations.
 
 ### Gap 5: Cross-defense vulnerability profiling (8 defenses, same framework, same conditions)
 
@@ -286,7 +313,7 @@ PoisonedFL (Xie 2025) uses multi-round consistency and dynamic magnitude adjustm
 - BackFed tests 20 defenses but no FLRAM, no MAB-RFL, no model-poisoning-focused primitives
 - None test under adaptive + composite + scheduling dimensions simultaneously
 
-**Novelty claim:** "We provide the first unified evaluation spanning Krum, Bulyan, TrimmedMean, Median, FLTrust, FoolsGold, FLRAM, and MAB-RFL under identical experimental conditions with adaptive, composite, and scheduled attacks."
+**Candidate contribution claim:** “The planned evaluation compares Krum, Bulyan, TrimmedMean, Median, FLTrust, FoolsGold, FLRAM, and MAB-RFL variants under matched adaptive, composite, and scheduled attack conditions.” The current database does not yet contain the complete matched, multi-seed design.
 
 **Confidence:** Moderate — the defense count (8) is lower than FLPoison's 17, but the attack dimension coverage is wider.
 
@@ -302,39 +329,39 @@ Papers using FEMNIST with 62 classes in Byzantine settings:
 
 These papers use FEMNIST but none combine it with: 8 defenses + adaptive MAB + composite attacks + scheduling.
 
-**Revised novelty claim:** "While FEMNIST(62) appears in a handful of prior evaluations (Mozaffari 2023, Krauss 2023, FLDetector 2022), no prior work evaluates it under our full attack dimension space (adaptive MAB, composites, scheduling, onset, ramping)."
+**Candidate contribution claim:** “While FEMNIST(62) appears in prior evaluations, the planned study combines it with adaptive portfolio selection, composites, scheduling, onset, and ramping; no exact match for that design was found in the recorded search subset.”
 
 **Confidence:** Moderate — FEMNIST alone is not novel, but the combination is.
 
 ### Gap 7: Trust-weight shared abstraction
 
-**Status: NO prior work found.**
+**Status: No matching work found in the recorded search subset.**
 
 No prior paper implements FLTrust, FoolsGold, FLRAM, and MAB-RFL under a shared trust-weighting framework with matched parameters and the same blending equation.
 
-**Novelty claim:** "We formalize FLTrust, FoolsGold, FLRAM, and MAB-RFL under a shared trust-weight abstraction, enabling controlled comparison by varying only the raw trust score computation."
+**Candidate contribution claim:** “We formalize FLTrust, FoolsGold, FLRAM, and MAB-RFL under a shared trust-weight abstraction for controlled comparison of raw scoring rules.” Results apply to these harmonized variants and must not be presented as canonical-algorithm failures without reference-implementation replication.
 
 **Confidence:** High.
 
 ### Gap 8: Per-class accuracy degradation under Byzantine attacks
 
-**Status: NO prior work found.**
+**Status: No matching work found in the recorded search subset.**
 
-All surveyed papers report aggregate accuracy, loss, attack success rate, or F1. None report per-class accuracy degradation showing which classes are disproportionately damaged by attacks.
+No matching per-class Byzantine-degradation analysis was found in the recorded search subset; this absence claim is limited to the indexed survey metadata and summaries.
 
-**Novelty claim:** "We report per-class accuracy under attack, revealing that Byzantine attacks disproportionately affect under-represented classes in non-IID settings."
+**Candidate contribution claim:** “We report per-class accuracy under attack to test whether under-represented classes are disproportionately affected in non-IID settings.” Current patterns require multi-seed confirmation.
 
 **Confidence:** Moderate — need multi-seed confirmation.
 
 ---
 
-## 6.5 Automated Vulnerability Discovery: How the MAB Finds New Things
+## 6.5 Automated Hypothesis Generation: How the MAB Prioritizes Tests
 
 ### The Core Insight
 
-Every robust aggregation defense rests on **stated assumptions** — mathematical or behavioral conditions that must hold for the defense to work. These assumptions are documented in the original papers but rarely tested systematically. Our MAB-based adaptive attack engine functions as an **automated assumption fuzzer**: it probes each defense empirically, without knowing its assumptions, and gravitates toward whichever attack primitive causes the most damage.
+Every robust aggregation defense rests on stated mathematical or behavioral assumptions. The MAB-based attack engine can probe a defense empirically without receiving its identity and prioritize primitives associated with larger observed rewards.
 
-When the MAB converges to an attack that violates a specific defense assumption, it has **discovered** that assumption's weakness — not through analysis, but through empirical trial and error. This is genuinely different from manual attack design, where the researcher must first understand the defense to craft an exploit.
+When the MAB converges to a primitive that could violate a defense assumption, the output is a hypothesis about that interaction. Convergence does not demonstrate the mechanism, adaptive advantage, or novelty. Those require matched fixed controls, valid clean baselines, multiple seeds, and mechanism-isolating ablations.
 
 ### Discovery Classification Types
 
@@ -391,34 +418,34 @@ The MAB is most likely to discover new vulnerabilities when:
 
 ---
 
-## 7. Known vs Novel Findings Classification
+## 7. Corpus-Matched vs Candidate-New Findings
 
-### Known weaknesses (confirmed by prior literature)
+### Literature-matched weaknesses and preliminary reproductions
 
 | Finding | Prior Evidence | Our Contribution |
 |---------|---------------|------------------|
-| Krum/MultiKrum fails against ALIE | Baruch19, Fang20, FLPoison25, BLADES24 | **Confirmed** under 62-class non-IID. Added: zero filtering at 24% malicious (overrepresentation). |
-| TrimmedMean fails against ALIE | Baruch19, Fang20, FLPoison25, BLADES24 | **Confirmed** under 62-class non-IID. Added: scheduling mode changes dominant attack. |
-| Bulyan fails under non-IID | El Mhamdi18, Karimireddy22, LASA25 | **Confirmed** with quantification: 57pp accuracy range across clean baselines. |
-| FLTrust is more robust than coordinate-wise defenses | Cao21, PoisonedFL25, FLPoison25 | **Confirmed** — only defense that never collapsed. Added: root dataset must scale with class count. |
-| FoolsGold has false positives under non-IID | Fung20, FLAME22 | **Confirmed** with mechanism: MAB attack-type switching decorrelates Sybil signal. |
-| All robust AGRs degrade under non-IID | Karimireddy22, LASA25, Li24(TBD) | **Confirmed** across 8 defenses. |
+| Krum/MultiKrum fails against ALIE | Baruch19, Fang20, FLPoison25, BLADES24 | Preliminary literature-consistent observation on 62-class non-IID data; filtering behavior needs matched multi-seed confirmation. |
+| TrimmedMean fails against ALIE | Baruch19, Fang20, FLPoison25, BLADES24 | Preliminary literature-consistent observation; schedule-dependent selection needs controlled comparison. |
+| Bulyan degrades under non-IID | El Mhamdi18, Karimireddy22, LASA25 | Large clean-baseline sensitivity observed, but parameter and IID controls are required before causal attribution. |
+| FLTrust is reported robust in prior work | Cao21, PoisonedFL25, FLPoison25 | The limited harmonized-variant pilot did not collapse; this is not a canonical or library-wide robustness result. |
+| FoolsGold can produce false positives under non-IID data | Fung20, FLAME22 | Candidate interaction in a harmonized pilot; switching-based decorrelation remains an unisolated hypothesis. |
+| Robust aggregators can degrade under non-IID data | Karimireddy22, LASA25, Li24(TBD) | Preliminary observations across variants; matched clean/IID controls and multiple seeds remain required. |
 
-### Candidate novel findings (not found in 60+ papers)
+### Candidate-new findings (no exact match in the local corpus)
 
-| Finding | Why novel | Discovery Type | Evidence strength |
+| Finding | Why it is a candidate | Discovery Type | Evidence strength |
 |---------|-----------|---------------|-------------------|
-| **Different dominant attack per defense under adaptive MAB** | No prior work tests attacker-side MAB across defenses | — | Moderate (single-seed, full sweep for 4 defenses, pilot for 4) |
-| **Scheduling mode changes dominant attack** | No prior work sweeps scheduling as attack parameter | scheduling_sensitivity | Moderate (single-seed, 252-run FEMNIST) |
-| **Multi-layer composition causes universal collapse** | No benchmark tests stacked model poisoning | synergistic_composite | Moderate (sample_k with k=3 collapsed all 4 swept defenses) |
-| **FoolsGold evasion via MAB switching + churn** | No prior work tests FoolsGold against adaptive + scheduled attacks | assumption_violation | Weak (pilot, 1 attacked run) |
+| **Different dominant attack per defense under adaptive MAB** | No exact portfolio-selection match in the local corpus | — | Moderate (single-seed, full sweep for 4 defenses, pilot for 4) |
+| **Scheduling mode changes dominant attack** | No exact scheduling-sweep match in the local corpus | scheduling_sensitivity | Moderate (single-seed, 252-run FEMNIST) |
+| **Multi-layer runs coincide with collapse across four variants** | No exact stacked-model-poisoning benchmark match in the local corpus | synergistic_composite | Moderate (sample_k with k=3; component causality not isolated) |
+| **Candidate FoolsGold interaction under MAB switching + churn** | No exact FoolsGold adaptive-scheduling pair in the local corpus | assumption_violation | Weak (harmonized variant, pilot, 1 attacked run) |
 | **FLRAM bypassed by ALIE (all 3 sub-scores high)** | FLRAM only tested with basic attacks by own authors | — | Weak (pilot, 1 attacked run) |
 | **MAB-RFL reputation exploit via delayed onset** | MAB-RFL only tested with basic attacks by own authors | assumption_violation | Weak (pilot, 1 attacked run) |
 | **FLTrust root dataset must scale with class count** | Cao21 tested only 10-class datasets | — | Moderate (3 root dataset sizes on 62-class) |
 | **Bulyan clean baseline 57pp sensitivity range** | Parameterization sensitivity known but not quantified this extremely | assumption_violation | Moderate (3 clean baselines) |
 | **Trust-weight paradox (conservative params = weak discrimination)** | Not formalized in prior work | — | Moderate (all 4 trust defenses) |
-| **Per-class accuracy reveals disproportionate class damage** | No prior work reports per-class under Byzantine | — | Moderate (62-class FEMNIST) |
-| **FedMedian denial-of-learning (collapses despite 100% rejection)** | Defense filters all malicious but model still collapses | assumption_violation | Moderate (multiple runs across sweep) |
+| **Per-class accuracy may reveal disproportionate class damage** | No exact per-class Byzantine analysis match in the local corpus | — | Moderate (62-class FEMNIST; needs multiple seeds) |
+| ~~FedMedian denial-of-learning despite 100% rejection~~ | Retracted: historical placeholder selection rows were misread as rejection telemetry. The filter was inactive and rejected zero updates. | — | Invalidated by telemetry audit |
 
 ---
 
@@ -583,7 +610,7 @@ Without this, the central contribution (attack-side MAB) cannot be validated as 
 
 ## 8. Complete Knowledge Base Reference (205 Papers)
 
-> Auto-generated from `db/known_vulnerabilities.json` — the knowledge base the framework uses to classify findings as [KNOWN], [REPRODUCED], or [NOVEL].
+> Synchronized snapshot of `db/known_vulnerabilities.json` — the runtime knowledge base used to classify findings as [KNOWN WEAKNESS], [REPRODUCED], [KNOWN ROBUST], [CANDIDATE NEW], or [NEEDS TESTING]. No repository script currently regenerates this entire Markdown document automatically, so synchronization must be verified when the JSON changes.
 > 
 > **96 in-scope** (Byzantine FL robustness: attacks, defenses, robust aggregation)
 > **109 out-of-scope** (privacy, inference, gradient inversion — included for completeness)

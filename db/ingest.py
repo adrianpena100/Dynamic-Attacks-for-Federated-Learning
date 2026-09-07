@@ -519,6 +519,46 @@ def _load_client_map(summaries_dir):
     return fwd, rev
 
 
+def _observed_malicious_activity(run_dir: Path):
+    """Return True if the run's artifacts show any client actually acted
+    maliciously, False if artifacts show none, or None if no artifact exists.
+
+    This is the ground truth for whether attacks ran, independent of config
+    flags. A run can carry ``attack-enabled=True`` (a pyproject default) in its
+    resolved config yet have zero malicious clients every round, so config flags
+    alone cannot distinguish a real attacked run from a clean baseline.
+    """
+    summary = run_dir / "summaries" / "run_config_and_summary.json"
+    if summary.exists():
+        try:
+            with open(summary, encoding="utf-8") as f:
+                sj = json.load(f)
+            if sj.get("ever_malicious_client_ids"):
+                return True
+            counts = sj.get("per_round_malicious_counts")
+            if counts is not None:
+                total = sum(x for x in counts if isinstance(x, (int, float)))
+                return total > 0
+        except Exception:
+            pass
+    timeline = run_dir / "summaries" / "attack_timeline.csv"
+    if timeline.exists():
+        try:
+            with open(timeline, encoding="utf-8", newline="") as f:
+                for row in csv.DictReader(f):
+                    nm = row.get("num_malicious")
+                    if nm not in (None, "", "0", "0.0"):
+                        try:
+                            if float(nm) > 0:
+                                return True
+                        except ValueError:
+                            pass
+            return False
+        except Exception:
+            pass
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Ingest one run
 # ---------------------------------------------------------------------------
@@ -552,19 +592,30 @@ def _ingest_one_run(conn, run_dir, sweep_id, sweep_row=None):
     if layering_mode in ("", "none"):
         layering_mode = None
 
-    is_baseline = 1 if attack_mode is None else 0
-    attack_enabled = 0 if is_baseline else 1
+    # Whether attacks ACTUALLY ran is ground truth from run artifacts, not from
+    # the flat "attack-mode" key. When attacks are configured via the
+    # [tool.flwr.attack] table, attack-mode is empty even though attacks ran, so
+    # keying is_baseline off attack-mode alone mislabels attacked runs as clean
+    # baselines. Prefer observed malicious activity; fall back to config/label
+    # signals only when no run artifact exists to read.
+    attacks_ran = _observed_malicious_activity(run_dir)
 
     if sweep_row:
         label = sweep_row.get("label", "")
-        if "BASELINE" in label.upper() or "clean" in label.lower():
-            is_baseline = 1
-            attack_enabled = 0
-            attack_mode = None
+        label_says_baseline = "BASELINE" in label.upper() or "clean" in label.lower()
         seed = _safe_int(sweep_row.get("seed"))
     else:
         label = run_dir.name
+        label_says_baseline = False
         seed = _safe_int(rc.get("attack-seed"))
+
+    if attacks_ran is None:
+        is_baseline = 1 if (attack_mode is None or label_says_baseline) else 0
+    else:
+        is_baseline = 0 if attacks_ran else 1
+    attack_enabled = 0 if is_baseline else 1
+    if is_baseline:
+        attack_mode = None
 
     model_arch = str(rc.get("model", "simple-cnn")).strip() or "simple-cnn"
     modality = _infer_modality(dataset, rc)
@@ -604,7 +655,9 @@ def _ingest_one_run(conn, run_dir, sweep_id, sweep_row=None):
             run_id, sweep_id, label, run_dir.name, run_folder,
             strategy, dataset, partitioner, dirichlet_alpha, is_iid,
             seed,
-            _safe_int(rc.get("num-clients")) or 100,
+            _safe_int(rc.get("num-total-clients"))
+            or _safe_int(rc.get("num-clients"))
+            or 100,
             _safe_int(rc.get("num-server-rounds")),
             _safe_float(rc.get("fraction-train")),
             _safe_int(rc.get("local-epochs")),

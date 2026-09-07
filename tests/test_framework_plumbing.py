@@ -209,14 +209,18 @@ class TestModelFactory:
         with pytest.raises(RuntimeError, match="scaffolded"):
             get_task_from_run_config({"dataset": "google/speech_commands"})
 
-    def test_text_ignores_model_key(self):
-        from pytorchexample.task import get_task_from_run_config
-        for model_name in ["simple-cnn", "resnet18", "garbage"]:
+    def test_text_uses_own_model_or_fails_fast(self):
+        from pytorchexample.task import ConfigurationError, get_task_from_run_config
+        # Benign names (auto/empty/unknown-non-vision) fall back to the text model.
+        for model_name in ["auto", "", "garbage"]:
             spec, factory = get_task_from_run_config(
                 {"dataset": "sentiment140", "model": model_name}
             )
-            model = factory()
-            assert type(model).__name__ == "TextClassifier"
+            assert type(factory()).__name__ == "TextClassifier"
+        # Explicit vision architectures on a text dataset fail fast (section 15).
+        for model_name in ["simple-cnn", "resnet18"]:
+            with pytest.raises(ConfigurationError):
+                get_task_from_run_config({"dataset": "sentiment140", "model": model_name})
 
 
 # ---------------------------------------------------------------------------
@@ -409,3 +413,60 @@ class TestAttackEngineInstantiation:
         )
         assert engine.attack_config.layering_mode == "sample_k"
         assert engine.attack_config.layered_k == 3
+
+
+# ---------------------------------------------------------------------------
+# 7. Byzantine cap helper
+# ---------------------------------------------------------------------------
+
+
+class TestByzantineCap:
+    """_byzantine_cap returns the max tolerable Byzantine nodes per defense."""
+
+    def _cap(self, strategy, n):
+        from pytorchexample.server_app import _byzantine_cap
+        return _byzantine_cap(strategy, n)
+
+    # --- Bulyan: max f = (n-3)//4 ---
+
+    def test_bulyan_100_clients(self):
+        assert self._cap("bulyan", 100) == 24  # (100-3)//4 = 24
+
+    def test_bulyan_7_clients_minimum(self):
+        # n=7: (7-3)//4 = 1
+        assert self._cap("bulyan", 7) == 1
+
+    def test_bulyan_small_n_clamps_to_zero(self):
+        # n=3: (3-3)//4 = 0
+        assert self._cap("bulyan", 3) == 0
+
+    # --- Krum / MultiKrum: max f = (n-3)//2 ---
+
+    def test_krum_100_clients(self):
+        assert self._cap("krum", 100) == 48  # (100-3)//2 = 48
+
+    def test_multikrum_100_clients(self):
+        assert self._cap("multikrum", 100) == 48
+
+    def test_krum_5_clients(self):
+        assert self._cap("krum", 5) == 1  # (5-3)//2 = 1
+
+    # --- Unconstrained strategies return None ---
+
+    def test_fedavg_unconstrained(self):
+        assert self._cap("fedavg", 100) is None
+
+    def test_fedmedian_unconstrained(self):
+        assert self._cap("fedmedian", 100) is None
+
+    def test_fltrust_unconstrained(self):
+        assert self._cap("fltrust", 100) is None
+
+    def test_foolsgold_unconstrained(self):
+        assert self._cap("foolsgold", 100) is None
+
+    def test_flram_unconstrained(self):
+        assert self._cap("flram", 100) is None
+
+    def test_mabrfl_unconstrained(self):
+        assert self._cap("mabrfl", 100) is None

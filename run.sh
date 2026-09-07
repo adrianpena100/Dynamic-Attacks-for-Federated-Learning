@@ -49,11 +49,15 @@ if [[ -d "$RUN_OUTPUT_DIR" ]]; then
   # 4. Generate notebook report
   "$PYTHON_BIN" "$ROOT_DIR/scripts/generate_run_report.py" "$RUN_OUTPUT_DIR"
 
-  # 5. LLM analysis (always runs)
-  "$PYTHON_BIN" "$ROOT_DIR/scripts/llm_sweep_analysis.py" \
-    --sweeps-root "$RUN_OUTPUT_DIR" --call-api \
-    || echo "Warning: LLM analysis failed (API key or network issue)." >&2
-  echo "LLM analysis written inside: $RUN_OUTPUT_DIR"
+  # 5. LLM analysis (opt out with CALL_LLM_ANALYSIS=0)
+  if [[ "${CALL_LLM_ANALYSIS:-1}" != "0" ]]; then
+    "$PYTHON_BIN" "$ROOT_DIR/scripts/llm_sweep_analysis.py" \
+      --sweeps-root "$RUN_OUTPUT_DIR" --call-api \
+      || echo "Warning: LLM analysis failed (API key or network issue)." >&2
+    echo "LLM analysis written inside: $RUN_OUTPUT_DIR"
+  else
+    echo "Skipping LLM analysis (CALL_LLM_ANALYSIS=0)."
+  fi
 else
   echo "Warning: Could not determine run output directory for analysis." >&2
 fi

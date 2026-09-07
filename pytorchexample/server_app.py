@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import math
+import random
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -28,6 +29,7 @@ from flwr.serverapp.strategy import (
 )
 from pytorchexample.task import (
     AttackEngine,
+    describe_resolution,
     get_task_from_run_config,
     load_attack_config,
     load_centralized_dataset,
@@ -572,6 +574,21 @@ class AttackFLTrust(AttackInjectedStrategyMixin, FLTrustStrategy):
 # ---------------------------------------------------------------------------
 # Trust-based robust aggregation helpers and strategies
 # ---------------------------------------------------------------------------
+
+def _byzantine_cap(strategy_name: str, n: int) -> Optional[int]:
+    """Return the max Byzantine nodes the defense can tolerate, or None if unconstrained.
+
+    Bulyan requires n >= 4f + 3  →  max f = (n - 3) // 4
+    Krum / MultiKrum require n >= 2f + 3  →  max f = (n - 3) // 2
+    All other strategies have no strict Byzantine bound on num_malicious_nodes.
+    """
+    s = strategy_name.lower()
+    if s == "bulyan":
+        return max(0, (n - 3) // 4)
+    if s in {"krum", "multikrum"}:
+        return max(0, (n - 3) // 2)
+    return None
+
 
 def _src_node_id(reply: Any) -> int:
     try:
@@ -1141,6 +1158,43 @@ def main(grid: Grid, context: Context) -> None:
     # Attack engine (no-op if disabled or if artifact-dir not provided)
     attack_engine = AttackEngine(run_config=dict(context.run_config), num_rounds=int(num_rounds))
 
+    # Seed server-side model initialization and any strategy randomness from the
+    # fully resolved attack seed. Sweeps can still override this with
+    # attack-seed=<value>, while plain runs remain reproducible by default.
+    resolved_seed = int(attack_engine.attack_config.seed)
+    random.seed(resolved_seed)
+    np.random.seed(resolved_seed)
+    torch.manual_seed(resolved_seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(resolved_seed)
+    print(f"[Reproducibility] resolved_seed={resolved_seed}")
+
+    # Log what AUTO resolution actually chose (dataset -> modality -> model). This
+    # is the reproducibility record: it reports resolved values, not TOML requests.
+    try:
+        _res = describe_resolution(dict(context.run_config))
+        print(
+            "[Resolve] dataset={requested_dataset} modality={resolved_modality} "
+            "task={resolved_task} feature_key={resolved_feature_key} "
+            "label_key={resolved_label_key} num_classes={resolved_num_classes} "
+            "input_channels={resolved_input_channels} model={resolved_model} "
+            "partitioner={resolved_partitioner} "
+            "natural_key={resolved_natural_partition_key}".format(**_res)
+        )
+        # Fail-fast/inform on image-space data attacks against non-vision data.
+        _ac = attack_engine.attack_config
+        _backdoor_active = bool(getattr(getattr(_ac, "backdoor", None), "enabled", False)) or (
+            "backdoor" in [str(a).lower() for a in (getattr(_ac, "layered_attacks", []) or [])]
+        ) or (float((getattr(_ac, "weights", {}) or {}).get("backdoor", 0.0)) > 0.0)
+        if _ac.enabled and _backdoor_active and _res["resolved_modality"] != "vision":
+            print(
+                "[Compat] WARNING: backdoor is an image-patch (vision-only) attack but "
+                f"modality={_res['resolved_modality']}. It will be a silent no-op on "
+                "this dataset (label_flip and update-poisoning attacks still apply)."
+            )
+    except Exception as _exc:
+        print(f"[Resolve] WARNING: could not log resolved config: {_exc}")
+
     fraction_train: float = float(context.run_config.get("fraction-train", 1.0))
     min_train_nodes: int = int(context.run_config.get("min-train-nodes", 2))
     min_evaluate_nodes: int = int(context.run_config.get("min-evaluate-nodes", 2))
@@ -1160,6 +1214,21 @@ def main(grid: Grid, context: Context) -> None:
         num_malicious_nodes = round(_attack_cfg.malicious_fraction * _selected_per_round)
     else:
         num_malicious_nodes = 0
+
+    # For Byzantine-strict defenses (Bulyan, Krum/MultiKrum), cap num_malicious_nodes
+    # at the defense's theoretical maximum so the strategy's correctness guarantees hold.
+    # Bulyan: n >= 4f+3  →  max f = (n-3)//4
+    # Krum/MultiKrum: n >= 2f+3  →  max f = (n-3)//2
+    _byz_cap = _byzantine_cap(strategy_name, _selected_per_round)
+    if _byz_cap is not None and num_malicious_nodes > _byz_cap:
+        print(
+            f"[Strategy] WARNING: '{strategy_name}' Byzantine bound exceeded — "
+            f"requested {num_malicious_nodes} malicious out of {_selected_per_round} "
+            f"selected clients, but max is {_byz_cap}. "
+            f"Capping to {_byz_cap}. "
+            f"Adjust malicious_fraction in pyproject.toml if this is unintentional."
+        )
+        num_malicious_nodes = _byz_cap
 
     _toml_select = int(context.run_config.get("num-nodes-to-select", 0))
     if _toml_select > 0:
@@ -1357,10 +1426,19 @@ def main(grid: Grid, context: Context) -> None:
         evaluate_fn=evaluate_fn,
     )
 
-    # Save final model to disk
-    print("\nSaving final model to disk...")
+    # Save the checkpoint with the run artifacts when artifact-dir is set. A
+    # direct `flwr run .` without an artifact directory retains the historical
+    # top-level fallback.
     state_dict = result.arrays.to_torch_state_dict()
-    torch.save(state_dict, "final_model.pt")
+    artifact_dir_raw = context.run_config.get("artifact-dir") or context.run_config.get("artifact_dir")
+    if artifact_dir_raw:
+        checkpoint_dir = Path(str(artifact_dir_raw)).resolve() / "checkpoints"
+        checkpoint_dir.mkdir(parents=True, exist_ok=True)
+        checkpoint_path = checkpoint_dir / "final_model.pt"
+    else:
+        checkpoint_path = Path("final_model.pt")
+    print(f"\nSaving final model to: {checkpoint_path}")
+    torch.save(state_dict, checkpoint_path)
 
 
 def global_evaluate(

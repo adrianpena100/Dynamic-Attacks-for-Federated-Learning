@@ -210,6 +210,7 @@ def _cell_overview(rc: Dict, meta: Dict, analysis: Dict) -> List:
     acc = analysis.get("accuracy", {})
     atk = analysis.get("attack", {})
     findings = analysis.get("findings", [])
+    validity = analysis.get("research_validity", {})
 
     final_acc = f"{acc.get('final', 'N/A'):.4f}" if isinstance(acc.get("final"), (int, float)) else "N/A"
     peak_acc = f"{acc.get('peak', 'N/A'):.4f}" if isinstance(acc.get("peak"), (int, float)) else "N/A"
@@ -250,8 +251,12 @@ def _cell_overview(rc: Dict, meta: Dict, analysis: Dict) -> List:
     | **Peak Accuracy** | {peak_acc} |
     | **Trajectory** | {trajectory} |
     | **Final F1 (macro)** | {f1_str} |
+    | **Evidence Status** | {validity.get('status', 'unknown')} |
     | **Verdict** | {verdict} |
     """)
+
+    if validity.get("limitations"):
+        md += "\n> **Claim limitation:** " + " ".join(validity["limitations"]) + "\n"
 
     return [new_markdown_cell(md)]
 
@@ -715,7 +720,10 @@ def _cell_findings_suggestions(analysis: Dict) -> List:
             if atlas:
                 lines.append(f"> ATLAS: {', '.join(atlas)}\n")
             if novelty:
-                lines.append(f"> Novelty: {novelty.replace('_', ' ')}\n")
+                label = "candidate new (not confirmed novel)" if novelty == "candidate_new" else novelty.replace("_", " ")
+                lines.append(f"> Novelty: {label}\n")
+            if f.get("validation_status"):
+                lines.append(f"> Validation: {f['validation_status'].replace('_', ' ')}\n")
             lines.append("")
         cells.append(new_markdown_cell("\n".join(lines)))
     else:

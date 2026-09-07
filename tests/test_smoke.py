@@ -77,8 +77,10 @@ class TestModelConfig:
     def test_toml_default_model_is_supported(self):
         data = _load_toml()
         model = data["tool"]["flwr"]["app"]["config"]["model"]
-        assert model in SUPPORTED_VISION_MODELS, (
-            f"TOML default model '{model}' is not in the supported set: {SUPPORTED_VISION_MODELS}"
+        # "auto" is the normal dataset-driven default; explicit names are the overrides.
+        allowed = set(SUPPORTED_VISION_MODELS) | {"auto"}
+        assert model in allowed, (
+            f"TOML default model '{model}' is not in the supported set: {allowed}"
         )
 
     @needs_torch
@@ -128,14 +130,19 @@ class TestTextPipeline:
         out = model(x)
         assert out.shape == (2, 3)
 
-    def test_text_ignores_model_config(self):
-        from pytorchexample.task import get_task_from_run_config
-        for model_name in ["simple-cnn", "resnet18", "nonexistent"]:
+    def test_text_uses_own_model_or_fails_fast(self):
+        from pytorchexample.task import ConfigurationError, get_task_from_run_config
+        # Benign requests (auto/empty/unknown-non-vision) use the text model.
+        for model_name in ["auto", "", "nonexistent"]:
             spec, factory = get_task_from_run_config(
                 {"dataset": "sentiment140", "model": model_name}
             )
             assert spec.modality == "text"
             assert type(factory()).__name__ == "TextClassifier"
+        # An explicit VISION model on a text dataset now fails fast (section 15).
+        for model_name in ["simple-cnn", "resnet18"]:
+            with pytest.raises(ConfigurationError):
+                get_task_from_run_config({"dataset": "sentiment140", "model": model_name})
 
     def test_sentiment140_label_normalization(self):
         from pytorchexample.task import _normalize_classification_labels

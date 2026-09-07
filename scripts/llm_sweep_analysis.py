@@ -190,15 +190,29 @@ def _summarize_attack_log(run_dir: Path) -> Dict[str, Any]:
 def _summarize_defense_selection(run_dir: Path) -> Dict[str, Any]:
     path = run_dir / "summaries" / "defense_selection_by_round.csv"
     if not path.exists():
-        return {"defense_selection_rows": 0}
+        return {
+            "defense_selection_rows": 0,
+            "defense_selection_telemetry": {
+                "available": False,
+                "reason": "file missing",
+            },
+        }
 
     frac_vals: List[float] = []
     mal_selected: List[float] = []
     rows = 0
+    valid_rows = 0
+    strategies: Counter[str] = Counter()
     with path.open("r", newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
             rows += 1
+            name = str(row.get("defense_strategy") or "").strip().lower()
+            selected = _safe_float(row.get("num_selected_by_defense"))
+            if name in {"", "-", "none", "n/a", "na"} or not selected or selected <= 0:
+                continue
+            valid_rows += 1
+            strategies[name] += 1
             v_frac = _safe_float(row.get("malicious_selected_fraction"))
             v_nmal = _safe_float(row.get("num_malicious_selected_by_defense"))
             if v_frac is not None:
@@ -208,8 +222,51 @@ def _summarize_defense_selection(run_dir: Path) -> Dict[str, Any]:
 
     return {
         "defense_selection_rows": int(rows),
+        "defense_selection_valid_rows": int(valid_rows),
+        "defense_selection_telemetry": {
+            "available": bool(valid_rows),
+            "reason": "available" if valid_rows else "placeholder or not applicable",
+            "strategy_counts": dict(strategies),
+        },
         "malicious_selected_fraction": _series_stats(frac_vals),
         "num_malicious_selected_by_defense": _series_stats(mal_selected),
+    }
+
+
+def _summarize_defense_filter(run_dir: Path) -> Dict[str, Any]:
+    path = run_dir / "summaries" / "defense_filter_by_round.csv"
+    if not path.exists():
+        return {
+            "defense_filter_rows": 0,
+            "defense_filter_telemetry": {"available": False, "reason": "file missing"},
+        }
+
+    rows = 0
+    rejected = 0
+    kept = 0
+    modes: Counter[str] = Counter()
+    with path.open("r", newline="", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            rows += 1
+            modes[str(row.get("mode") or "none").strip().lower()] += 1
+            n_rejected = _safe_float(row.get("num_rejected"))
+            n_after = _safe_float(row.get("num_after"))
+            if n_rejected is not None:
+                rejected += int(n_rejected)
+            if n_after is not None:
+                kept += int(n_after)
+
+    active = any(mode not in {"", "none", "off", "disabled"} for mode in modes)
+    return {
+        "defense_filter_rows": int(rows),
+        "defense_filter_telemetry": {
+            "available": bool(rows),
+            "reason": "available" if rows else "file empty",
+            "active": active,
+            "mode_counts": dict(modes),
+            "total_rejected": int(rejected),
+            "total_kept_observations": int(kept),
+        },
     }
 
 
@@ -250,7 +307,10 @@ def _summarize_round_attack_stats(run_dir: Path) -> Dict[str, Any]:
 def _summarize_trust_strategy(run_dir: Path) -> Dict[str, Any]:
     path = run_dir / "summaries" / "trust_strategy_by_round.csv"
     if not path.exists():
-        return {"trust_strategy_rows": 0}
+        return {
+            "trust_strategy_rows": 0,
+            "trust_telemetry": {"available": False, "reason": "file missing"},
+        }
 
     rows = 0
     strategies: Counter[str] = Counter()
@@ -283,6 +343,10 @@ def _summarize_trust_strategy(run_dir: Path) -> Dict[str, Any]:
     ]
     return {
         "trust_strategy_rows": int(rows),
+        "trust_telemetry": {
+            "available": bool(rows),
+            "reason": "available" if rows else "not applicable or file empty",
+        },
         "trust_strategy_counts": dict(strategies.most_common()),
         "trust_score": _series_stats(trust_vals),
         "trust_avg_by_round": _series_stats(avg_trust_by_round),
@@ -313,6 +377,20 @@ def _parse_run_summary_json(run_dir: Path) -> Dict[str, Any]:
         out["final_asr"] = float(final_asr)
 
     rac = obj.get("resolved_attack_config") or {}
+    run_config = obj.get("run_config") or {}
+    comparison_fields = (
+        "strategy", "dataset", "partitioner", "dirichlet-alpha", "model",
+        "num-total-clients", "num-server-rounds", "fraction-train",
+        "local-epochs", "learning-rate", "batch-size", "attack-seed",
+    )
+    out["comparison_config"] = {
+        key: run_config.get(key) for key in comparison_fields
+    }
+    if "enabled" in rac:
+        out["attack_enabled"] = bool(rac.get("enabled"))
+    if rac.get("seed") is not None:
+        out["seed"] = rac.get("seed")
+        out["comparison_config"]["attack-seed"] = rac.get("seed")
     atk_mode = str(rac.get("mode", "")).strip().lower()
     if atk_mode:
         out["attack_mode"] = atk_mode
@@ -334,9 +412,23 @@ def _build_run_record(run_dir: Path) -> Dict[str, Any]:
     rec.update(_summarize_rounds_json(run_dir))
     rec.update(_summarize_attack_log(run_dir))
     rec.update(_summarize_defense_selection(run_dir))
+    rec.update(_summarize_defense_filter(run_dir))
     rec.update(_summarize_round_attack_stats(run_dir))
     rec.update(_summarize_trust_strategy(run_dir))
     rec.update(_parse_run_summary_json(run_dir))
+
+    meta_path = run_dir / "meta.json"
+    if meta_path.exists():
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            resolved = meta.get("resolved_config_for_naming") or {}
+            rec["strategy"] = meta.get("strategy")
+            rec["dataset"] = meta.get("dataset")
+            meta_seed = resolved.get("attack-seed")
+            if rec.get("seed") is None and meta_seed is not None:
+                rec["seed"] = meta_seed
+        except Exception:
+            pass
 
     acc_vals = _read_metric_series(run_dir / "metrics" / "evaluate_server__accuracy.csv")
     asr_vals = _read_metric_series(run_dir / "metrics" / "evaluate_server__backdoor_asr.csv")
@@ -433,6 +525,49 @@ def _aggregate_strategy(strategy_dir: Path) -> Dict[str, Any]:
     collapse_10 = sum(1 for a in accs if a <= 0.10)
     high_asr = sum(1 for x in asrs if x >= 0.50)
 
+    baseline_runs = [
+        r for r in run_records
+        if r.get("attack_enabled") is False
+        or "baseline" in str(r.get("run_label") or "").lower()
+    ]
+    attacked_runs = [r for r in run_records if r not in baseline_runs]
+    adaptive_runs = [
+        r for r in attacked_runs if str(r.get("attack_mode") or "").lower() == "adaptive"
+    ]
+    fixed_control_runs = [
+        r for r in attacked_runs
+        if str(r.get("attack_mode") or "").lower() == "phase"
+    ]
+    def comparison_key(record: Dict[str, Any]) -> str:
+        return json.dumps(record.get("comparison_config") or {}, sort_keys=True, default=str)
+
+    baseline_keys = {comparison_key(r) for r in baseline_runs}
+    adaptive_keys = {comparison_key(r) for r in adaptive_runs}
+    fixed_keys = {comparison_key(r) for r in fixed_control_runs}
+    matched_baseline_keys = baseline_keys & (adaptive_keys | fixed_keys)
+    matched_triplet_keys = baseline_keys & adaptive_keys & fixed_keys
+    matched_seeds = sorted({
+        str(r.get("seed"))
+        for r in run_records
+        if comparison_key(r) in matched_triplet_keys and r.get("seed") is not None
+    })
+    evidence_limitations = []
+    if not matched_baseline_keys:
+        evidence_limitations.append("No clean baseline matches an attacked run's training configuration and seed.")
+    if not fixed_control_runs:
+        evidence_limitations.append("No matched non-adaptive/fixed-attack control is present.")
+    if not adaptive_runs:
+        evidence_limitations.append("No adaptive MAB run is present.")
+    if not matched_triplet_keys:
+        evidence_limitations.append(
+            "No baseline/fixed/adaptive comparison triplet shares the same training configuration and seed."
+        )
+    if len(matched_seeds) < 3:
+        evidence_limitations.append(
+            f"Only {len(matched_seeds)} matched comparison seed(s) are represented; at least three are required."
+        )
+    central_claim_ready = not evidence_limitations
+
     top_deadliest = sorted(
         [r for r in run_records if r.get("final_acc") is not None],
         key=lambda r: float(r.get("final_acc", 1.0)),
@@ -474,6 +609,21 @@ def _aggregate_strategy(strategy_dir: Path) -> Dict[str, Any]:
             "collapse_le_20": int(collapse_20),
             "collapse_le_10": int(collapse_10),
             "high_asr_ge_50": int(high_asr),
+        },
+        "research_validity": {
+            "status": "comparison_ready" if central_claim_ready else "exploratory",
+            "central_claim_ready": central_claim_ready,
+            "matched_baseline_present": bool(matched_baseline_keys),
+            "fixed_attack_controls_present": bool(fixed_control_runs),
+            "adaptive_runs_present": bool(adaptive_runs),
+            "matched_comparison_triplets": len(matched_triplet_keys),
+            "unique_matched_seeds": matched_seeds,
+            "minimum_seed_requirement_met": len(matched_seeds) >= 3,
+            "limitations": evidence_limitations,
+            "claim_rule": (
+                "Do not claim attack-caused degradation, adaptive superiority, or confirmed novelty "
+                "unless central_claim_ready is true and the relevant configurations are matched."
+            ),
         },
         "top_deadliest_runs": [_deadliest_run_entry(r) for r in top_deadliest],
         "run_records": run_records,
@@ -520,7 +670,8 @@ def _build_strategy_prompt(payload_json: str) -> str:
         "- literature counts: how many papers match, are related, or break this defense\n"
         "- kb_suggestions: recommended follow-up experiments\n\n"
         "You MUST use these KB findings in your report. For each vulnerability finding:\n"
-        "- Tag it as [KNOWN], [REPRODUCED], or [NOVEL] based on novelty_status\n"
+        "- Tag candidate_new as [CANDIDATE NEW], never [NOVEL] or confirmed novelty\n"
+        "- Use [REPRODUCED] only when the payload's research_validity supports the comparison\n"
         "- Cite the matching papers by author and year\n"
         "- State the ATLAS technique IDs\n"
         "- Explain what was known vs what is new\n"
@@ -529,12 +680,24 @@ def _build_strategy_prompt(payload_json: str) -> str:
         "- Which attack the MAB converged to and why that matters for this defense\n"
         "- Whether the convergence confirms a known weakness or reveals a new one\n"
         "- The reward source (server vs client) and its implications for threat model realism\n\n"
+        "TELEMETRY RULES (mandatory):\n"
+        "- Check every *_telemetry.available flag before interpreting a metric.\n"
+        "- Placeholder defense-selection rows (strategy '-', zero selected) mean NOT APPLICABLE, not rejection.\n"
+        "- defense_filter_telemetry active=false or mode=none means no pre-aggregation filter ran.\n"
+        "- Never infer malicious rejection, slip-through, or trust behavior from missing/empty telemetry.\n"
+        "- Report unavailable data as unavailable. Do not turn absent values into zero-valued evidence.\n\n"
+        "EVIDENCE RULES (mandatory):\n"
+        "- Read research_validity before making causal, comparative, reproducibility, or novelty claims.\n"
+        "- Without a matched clean baseline, describe low accuracy as an observed run outcome, not attack-caused damage.\n"
+        "- Without fixed primitive controls, do not claim the adaptive attacker outperformed fixed attacks.\n"
+        "- Without at least three seeds, call patterns preliminary and seed-specific.\n"
+        "- KB absence supports only candidate novelty, never confirmed novelty.\n\n"
         "Deliver an evidence-grounded report with:\n"
         "1) Data coverage audit and telemetry gaps.\n"
         "2) Vulnerability profile: collapse behavior, ASR behavior, stealth behavior, defense slip-through.\n"
         "3) Most dangerous run patterns (timing, mode, layering, selection) inferred from run labels + metrics.\n"
         "4) Defense failure mechanism hypotheses (explicitly separate observed vs inferred).\n"
-        "5) Knowledge base cross-reference: tag every finding as [KNOWN]/[REPRODUCED]/[NOVEL] with paper citations.\n"
+        "5) Knowledge base cross-reference: tag findings conservatively as [KNOWN], [REPRODUCED], or [CANDIDATE NEW].\n"
         "6) Quantified findings with concrete numbers and thresholds.\n"
         "7) ATLAS technique mapping for each finding.\n"
         "8) Prioritized follow-up experiments (at least 8), incorporating kb_suggestions.\n"
@@ -548,6 +711,9 @@ def _build_global_prompt(strategy_reports: Dict[str, str], payloads: Dict[str, D
     blob = json.dumps({"reports": strategy_reports, "payload_summaries": payloads}, indent=2)
     return (
         "Synthesize vulnerabilities across all available strategies for this dataset sweep.\n"
+        "Honor each payload's research_validity gates. Do not rank causal robustness when "
+        "matched baselines are absent, do not claim adaptive superiority without fixed controls, "
+        "and do not generalize single-seed observations. Treat unavailable telemetry as unavailable.\n"
         "Produce:\n"
         "1) Strategy robustness ranking with justification.\n"
         "2) Cross-strategy attacker tactic ranking by damage.\n"

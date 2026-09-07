@@ -22,6 +22,11 @@ pip install -e .
 flwr run .
 ```
 
+The checked-in defaults are an attacked research configuration, not a clean
+baseline: FedMedian on non-IID FEMNIST for 60 rounds with a 25% adaptive churn
+attacker. Use `attack-enabled=false` or `attack-preset="off"` for a clean run.
+The default seed is fixed at 1337 so an unmodified run is reproducible.
+
 ## Launch the Dashboard
 
 The dashboard keeps the current `pyproject.toml` defaults and launches experiments
@@ -58,6 +63,18 @@ Optional options:
 ```bash
 python scripts/run_simulation_and_log.py --federation local-simulation-gpu
 python scripts/run_simulation_and_log.py --run-config "num-server-rounds=5 local-epochs=2"
+```
+
+When launched through the runner, the final checkpoint is saved at
+`logs/<run-name>/checkpoints/final_model.pt` with the rest of that run's
+artifacts.
+
+`./run.sh` performs local analysis, database ingestion, notebook generation,
+and LLM analysis after training. To keep the workflow fully local and skip the
+external LLM API call:
+
+```bash
+CALL_LLM_ANALYSIS=0 ./run.sh
 ```
 
 

@@ -88,6 +88,42 @@ def test_foolsgold_trust_weighted_aggregation(tmp_path):
     _assert_trust_strategy_outputs(strategy, "foolsgold", global_state, replies, tmp_path)
 
 
+def test_foolsgold_downweights_colluding_clients(tmp_path):
+    """Directional correctness: two clients with near-identical update directions
+    (Sybil-like collusion) must receive lower effective trust weight than an
+    independent client with a distinct direction. This checks the defining
+    FoolsGold property, not merely that outputs are finite.
+    """
+    import csv
+
+    strategy = AttackFoolsGold(
+        trust_strength=1.0,
+        min_weight=0.0,
+        warmup_rounds=0,
+        **_common_kwargs(),
+    )
+    _attach_engine(strategy, tmp_path)
+    global_state = {"w": torch.tensor([0.0, 0.0])}
+    strategy._last_finite_global_arrays = ArrayRecord(global_state)
+    replies = [
+        Reply(1, {"w": torch.tensor([1.0, 0.001])}),  # colludes with 2
+        Reply(2, {"w": torch.tensor([1.0, 0.000])}),  # colludes with 1
+        Reply(3, {"w": torch.tensor([0.0, 1.0])}),    # independent direction
+    ]
+
+    strategy.aggregate_train(2, replies)
+
+    trust_csv = tmp_path / "summaries" / "trust_strategy_by_round.csv"
+    rows = {int(r["client_id"]): r for r in csv.DictReader(trust_csv.open())}
+    w1 = float(rows[1]["reputation"])
+    w2 = float(rows[2]["reputation"])
+    w3 = float(rows[3]["reputation"])
+    # Colluding pair down-weighted well below the independent client.
+    assert w3 > 0.5
+    assert w1 < 0.1 and w2 < 0.1
+    assert w3 > w1 and w3 > w2
+
+
 def test_flram_trust_weighted_aggregation(tmp_path):
     strategy = AttackFLRAM(
         trust_strength=1.0,

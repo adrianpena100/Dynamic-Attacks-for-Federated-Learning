@@ -34,7 +34,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from datasets import load_dataset
 from flwr_datasets import FederatedDataset
-from flwr_datasets.partitioner import DirichletPartitioner, IidPartitioner
+from flwr_datasets.partitioner import (
+    DirichletPartitioner,
+    IidPartitioner,
+    NaturalIdPartitioner,
+)
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, Normalize, ToTensor
 
@@ -747,7 +751,9 @@ def load_attack_config(*, run_config: Dict[str, Any]) -> AttackConfig:
             pass
     if "attack-random-relative-to-update-norm-prob" in run_config:
         try:
-            rrtnp = float(run_config.get("attack-random-relative-to-update-norm-prob"))
+            _rrtnp = float(run_config.get("attack-random-relative-to-update-norm-prob"))
+            if _rrtnp >= 0.0:
+                rrtnp = _rrtnp
         except Exception:
             pass
 
@@ -1128,6 +1134,28 @@ def load_attack_config(*, run_config: Dict[str, Any]) -> AttackConfig:
                 "backdoor": 1.0,
                 "alie": 0.0,
                 "mean_shift": 0.0,
+            }
+            return
+        if p in {"alie_only"}:
+            set_enabled(False, False, False, False, True, False)
+            weights = {
+                "gaussian_noise": 0.0,
+                "sign_flip": 0.0,
+                "label_flip": 0.0,
+                "backdoor": 0.0,
+                "alie": 1.0,
+                "mean_shift": 0.0,
+            }
+            return
+        if p in {"mean_shift_only", "meanshift_only"}:
+            set_enabled(False, False, False, False, False, True)
+            weights = {
+                "gaussian_noise": 0.0,
+                "sign_flip": 0.0,
+                "label_flip": 0.0,
+                "backdoor": 0.0,
+                "alie": 0.0,
+                "mean_shift": 1.0,
             }
             return
 
@@ -1540,7 +1568,9 @@ class AttackRecorder:
         self._write_poisoning_by_client_csv()
         self._write_attack_by_client_round_csv()
 
-        # Append defense-selection trace (best-effort)
+        # Append defense-selection trace (best-effort). Only Krum-family
+        # strategies produce meaningful selection telemetry. An empty mapping is
+        # "not applicable", not evidence that the defense selected zero clients.
         try:
             defense = rec.get("defense_selection") or {}
             if isinstance(defense, dict):
@@ -1550,6 +1580,9 @@ class AttackRecorder:
                 d_n = int(defense.get("num_selected", len(d_sel)) or len(d_sel))
                 d_mal = int(defense.get("num_malicious_selected", 0) or 0)
                 d_frac = float(defense.get("malicious_selected_fraction", 0.0) or 0.0)
+
+                if d_name.strip().lower() in {"", "-", "none", "n/a", "na"} or d_n <= 0:
+                    raise ValueError("defense selection telemetry is not applicable")
 
                 cmap = self._client_number_map()
                 d_nums = [cmap.get(int(cid)) for cid in d_sel if int(cid) in cmap]
@@ -3703,6 +3736,18 @@ class DatasetSpec:
     train_split: str = "train"
     central_eval_split: str = "test"
 
+    # Default model when the run config asks for model="auto" (or leaves it empty).
+    # For vision this is the architecture name passed to _create_vision_model.
+    # Text/tabular ignore it (they use their own models). Keep the policy here so a
+    # user only has to set `dataset` and the model follows automatically.
+    default_model: str = "simple-cnn"
+
+    # Natural (client/user) partition key for datasets that are already federated
+    # (e.g. FEMNIST by writer). Only used when partitioner="natural". When None the
+    # dataset has no natural client identity and must be partitioned synthetically
+    # (iid/dirichlet).
+    natural_partition_key: Optional[str] = None
+
 
 def get_dataset_spec(dataset: str) -> DatasetSpec:
     ds = str(dataset).strip()
@@ -3715,6 +3760,9 @@ def get_dataset_spec(dataset: str) -> DatasetSpec:
             input_channels=3,
             num_classes=10,
             central_eval_split="test",
+            # RGB/32x32: simple-cnn keeps 100-client simulation tractable. To use the
+            # stronger baseline, flip this to "resnet18" (or set model="resnet18").
+            default_model="simple-cnn",
         )
     if ds == "uoft-cs/cifar100":
         return DatasetSpec(
@@ -3725,6 +3773,8 @@ def get_dataset_spec(dataset: str) -> DatasetSpec:
             image_key="img",
             input_channels=3,
             central_eval_split="test",
+            # LeNet is weak on 100 classes; flip to "resnet18" when compute allows.
+            default_model="simple-cnn",
         )
     if ds == "ylecun/mnist":
         return DatasetSpec(
@@ -3755,6 +3805,9 @@ def get_dataset_spec(dataset: str) -> DatasetSpec:
             image_key="image",
             input_channels=1,
             central_eval_split="train",
+            # FEMNIST is naturally federated by writer. Set partitioner="natural" to
+            # use this real client identity instead of a synthetic iid/dirichlet split.
+            natural_partition_key="writer_id",
         )
 
     # Known recommended datasets (cataloged) - these will rely on auto key inference
@@ -3991,6 +4044,8 @@ def _resolve_spec(
         audio_key=base.audio_key,
         train_split=str(train_split or base.train_split),
         central_eval_split=resolved_eval_split,
+        default_model=base.default_model,
+        natural_partition_key=base.natural_partition_key,
     )
 
     # Apply key overrides
@@ -4078,23 +4133,34 @@ def _create_resnet18(input_channels: int, num_classes: int) -> nn.Module:
 
 def _create_vision_model(model_name: str, input_channels: int, num_classes: int) -> nn.Module:
     name = str(model_name).strip().lower()
-    if name in {"simple-cnn", "simple_cnn", "cnn", "lenet", ""}:
+    # "auto"/"" are resolved to a concrete architecture upstream (spec.default_model);
+    # accept them here too as a safety net so a bare call never crashes.
+    if name in {"simple-cnn", "simple_cnn", "cnn", "lenet", "auto", ""}:
         return Net(input_channels=input_channels, num_classes=num_classes)
     if name in {"resnet18", "resnet-18", "resnet_18"}:
         return _create_resnet18(input_channels, num_classes)
     raise ValueError(
         f"Unknown model architecture: {name!r}. "
-        f"Supported: {sorted(SUPPORTED_VISION_MODELS)}"
+        f"Supported: {sorted(SUPPORTED_VISION_MODELS)} (or 'auto')."
     )
 
 
-def create_model(dataset: str, model_name: str = "simple-cnn") -> nn.Module:
+def _resolve_vision_model_name(model_name: str, spec: DatasetSpec) -> str:
+    """Map an 'auto'/empty model request to the dataset's default architecture."""
+    name = str(model_name or "").strip().lower()
+    if name in {"", "auto", "default"}:
+        return str(spec.default_model or "simple-cnn").strip().lower()
+    return name
+
+
+def create_model(dataset: str, model_name: str = "auto") -> nn.Module:
     spec = get_dataset_spec(dataset)
     if spec.modality not in {"vision", "auto"}:
         raise ValueError("create_model() is vision-only; use get_task().")
     input_channels = int(spec.input_channels or 3)
     num_classes = int(spec.num_classes or 10)
-    return _create_vision_model(model_name, input_channels=input_channels, num_classes=num_classes)
+    resolved = _resolve_vision_model_name(model_name, spec)
+    return _create_vision_model(resolved, input_channels=input_channels, num_classes=num_classes)
 
 
 fds: Optional[FederatedDataset] = None  # Cache FederatedDataset
@@ -4145,6 +4211,31 @@ def _apply_transforms_factory(spec: DatasetSpec) -> Callable:
         return batch
 
     return apply_transforms
+
+
+def _validate_natural_partition_count(
+    requested_num_partitions: int,
+    available_natural: int,
+    *,
+    partition_by: str,
+    dataset: str,
+) -> None:
+    """Fail fast when num-supernodes != the dataset's real client count.
+
+    NaturalIdPartitioner derives the partition COUNT from the number of unique
+    natural ids (e.g. FEMNIST writers). If the simulation's num-supernodes does not
+    match, some client ids either never get data or fall out of range. We surface
+    this clearly before training instead of failing 100 clients deep.
+    """
+    if int(available_natural) != int(requested_num_partitions):
+        raise ConfigurationError(
+            f"partitioner='natural' for {dataset!r}: the data has "
+            f"{int(available_natural)} unique {partition_by!r} clients but the "
+            f"federation is configured for {int(requested_num_partitions)} supernodes.\n"
+            f"  Fix: set num-supernodes = {int(available_natural)} in "
+            f"[tool.flwr.federations.<name>] (and num-total-clients to match).\n"
+            f"  Or use partitioner='dirichlet'/'iid' for a synthetic split."
+        )
 
 
 def load_data(
@@ -4212,9 +4303,22 @@ def load_data(
                 alpha=dirichlet_alpha,
                 seed=int(data_seed),
             )
+        elif part_name in {"natural", "natural-id", "natural_id", "writer"}:
+            # Use the dataset's real client identity (e.g. FEMNIST by writer) instead
+            # of a synthetic split. NOTE: NaturalIdPartitioner derives the partition
+            # COUNT from the number of unique ids in the data, so num-supernodes must
+            # match that count. This path is opt-in and not yet validated against a
+            # real download; smoke-test it before using it in experiments.
+            if not spec.natural_partition_key:
+                raise ValueError(
+                    f"partitioner='natural' requested but dataset {spec.dataset!r} has "
+                    "no natural_partition_key. Use iid/dirichlet, or set a natural id "
+                    "column for this dataset."
+                )
+            part = NaturalIdPartitioner(partition_by=spec.natural_partition_key)
         else:
             raise ValueError(
-                f"Unknown partitioner {part_name!r}. Supported: iid, dirichlet."
+                f"Unknown partitioner {part_name!r}. Supported: iid, dirichlet, natural."
             )
 
         fds = FederatedDataset(
@@ -4224,6 +4328,18 @@ def load_data(
             trust_remote_code=bool(hf_trust_remote_code),
         )
         _fds_key = key
+
+        # Natural partitioning derives its client COUNT from the data. Trigger the
+        # (lazy) assignment and fail fast if num-supernodes disagrees, so we don't
+        # crash 100 clients deep or silently starve some client ids of data.
+        if part_name in {"natural", "natural-id", "natural_id", "writer"}:
+            fds.load_partition(0)
+            _validate_natural_partition_count(
+                int(num_partitions),
+                int(part.num_partitions),
+                partition_by=str(spec.natural_partition_key),
+                dataset=spec.dataset,
+            )
 
     partition = fds.load_partition(partition_id)
 
@@ -4561,6 +4677,68 @@ class TextClassifier(nn.Module):
         return self.fc2(x)
 
 
+class ConfigurationError(ValueError):
+    """Raised when a run config asks for an impossible dataset/model/attack combo.
+
+    Surfaced BEFORE clients are created or training starts so the user gets a clear
+    message instead of a deep PyTorch shape error 100 clients into a run.
+    """
+
+
+def _resolve_model_name(run_config: Dict[str, Any], spec: DatasetSpec) -> str:
+    """Resolve the requested model name against the dataset modality.
+
+    - "auto"/"" -> spec.default_model (vision) or the modality's built-in model.
+    - An explicit vision-only model (simple-cnn/resnet18) on a non-vision dataset
+      is a configuration error we fail fast on.
+    """
+    requested = str(run_config.get("model", "auto") or "auto").strip().lower()
+
+    if spec.modality == "vision":
+        return _resolve_vision_model_name(requested, spec)
+
+    # Non-vision modalities use their own model. "auto"/"" is fine; an explicit
+    # vision architecture is not.
+    if requested in {"", "auto", "default"}:
+        return "auto"
+    if requested in SUPPORTED_VISION_MODELS or requested in {
+        "simple_cnn", "cnn", "lenet", "resnet-18", "resnet_18",
+    }:
+        raise ConfigurationError(
+            f"Model {requested!r} is a vision model but dataset {spec.dataset!r} "
+            f"resolved to modality {spec.modality!r}.\n"
+            f"  Detected modality: {spec.modality}\n"
+            f"  Compatible: leave model=\"auto\" (uses the {spec.modality} model)."
+        )
+    # Unknown name for a non-vision modality: let it pass as auto (the modality
+    # model is fixed anyway) rather than inventing support.
+    return "auto"
+
+
+def describe_resolution(run_config: Dict[str, Any]) -> Dict[str, Any]:
+    """Return the fully-resolved experiment config (for logging/reproducibility).
+
+    This reports what AUTO resolution actually chose, not what the TOML requested.
+    """
+    spec, _ = get_task_from_run_config(run_config)
+    resolved_model = _resolve_model_name(run_config, spec)
+    partitioner = str(run_config.get("partitioner", "iid")).strip().lower()
+    return {
+        "requested_dataset": str(run_config.get("dataset", "")),
+        "resolved_modality": spec.modality,
+        "resolved_task": "classification",
+        "resolved_feature_key": spec.image_key or spec.text_key or spec.audio_key or "x",
+        "resolved_label_key": spec.label_key,
+        "resolved_num_classes": int(spec.num_classes),
+        "resolved_input_channels": spec.input_channels,
+        "resolved_model": resolved_model,
+        "resolved_partitioner": partitioner,
+        "resolved_natural_partition_key": spec.natural_partition_key,
+        "train_split": spec.train_split,
+        "central_eval_split": spec.central_eval_split,
+    }
+
+
 def get_task_from_run_config(run_config: Dict[str, Any]) -> Tuple[DatasetSpec, Callable[[], nn.Module]]:
     """Resolve a DatasetSpec and return (spec, model_factory)."""
     dataset = str(run_config.get("dataset", "uoft-cs/cifar10"))
@@ -4569,7 +4747,6 @@ def get_task_from_run_config(run_config: Dict[str, Any]) -> Tuple[DatasetSpec, C
     eval_split = str(run_config.get("dataset-eval-split", "test"))
     dataset_subset = str(run_config.get("dataset-subset", ""))
     trust_remote_code = bool(run_config.get("hf-trust-remote-code", False))
-    model_name = str(run_config.get("model", "simple-cnn")).strip().lower()
 
     overrides = {
         "image-key": str(run_config.get("image-key", "")) or None,
@@ -4593,8 +4770,13 @@ def get_task_from_run_config(run_config: Dict[str, Any]) -> Tuple[DatasetSpec, C
         assert spec.input_channels is not None
         _ch = spec.input_channels
         _nc = spec.num_classes
-        _mn = model_name
+        # Resolve model="auto" -> spec.default_model and fail fast on bad combos.
+        _mn = _resolve_model_name(run_config, spec)
         return spec, lambda: _create_vision_model(_mn, input_channels=_ch, num_classes=_nc)
+
+    # Non-vision: still validate the model request so e.g. resnet18 on a text
+    # dataset fails immediately with a clear message rather than being ignored.
+    _resolve_model_name(run_config, spec)
 
     if spec.modality == "text":
         return spec, lambda: TextClassifier(input_dim=2 ** 15, num_classes=spec.num_classes)
@@ -4608,6 +4790,164 @@ def get_task_from_run_config(run_config: Dict[str, Any]) -> Tuple[DatasetSpec, C
         )
 
     raise ValueError(f"Unsupported modality: {spec.modality!r}")
+
+
+def _maybe_poison_batch(
+    *,
+    inputs: torch.Tensor,
+    labels: torch.Tensor,
+    attack: Optional[Dict[str, Any]],
+    step: int,
+) -> Tuple[torch.Tensor, torch.Tensor, Dict[str, int]]:
+    if not attack:
+        return inputs, labels, {"poisoned": 0, "label_flip": 0, "backdoor": 0}
+    if not bool(attack.get("enabled", False)):
+        return inputs, labels, {"poisoned": 0, "label_flip": 0, "backdoor": 0}
+    if not bool(attack.get("is_malicious", False)):
+        return inputs, labels, {"poisoned": 0, "label_flip": 0, "backdoor": 0}
+
+    layers_raw = attack.get("layers")
+    layers: List[str] = []
+    if isinstance(layers_raw, list):
+        layers = [str(x).strip().lower().replace("-", "_") for x in layers_raw if str(x).strip()]
+    elif isinstance(layers_raw, str) and layers_raw.strip():
+        s = layers_raw.strip().lower()
+        if ";" in s:
+            layers = [p.strip().replace("-", "_") for p in s.split(";") if p.strip()]
+        elif "+" in s:
+            layers = [p.strip().replace("-", "_") for p in s.split("+") if p.strip()]
+
+    name = str(attack.get("name", "none") or "none").strip().lower().replace("-", "_")
+    if not layers:
+        layers = [name]
+
+    intensity = float(attack.get("intensity", 0.0) or 0.0)
+    if intensity <= 0.0 or all(str(x).strip().lower() in {"none", "off", "disabled"} for x in layers):
+        return inputs, labels, {"poisoned": 0, "label_flip": 0, "backdoor": 0}
+
+    li_raw = attack.get("layer_intensities")
+    if li_raw is None:
+        li_raw = attack.get("attack_layer_intensities")
+    layer_intensities: Dict[str, float] = {}
+    if isinstance(li_raw, dict):
+        for k, v in li_raw.items():
+            try:
+                kk = str(k).strip().lower().replace("-", "_")
+                if not kk:
+                    continue
+                layer_intensities[kk] = float(max(0.0, float(v)))
+            except Exception:
+                continue
+    elif isinstance(li_raw, str) and li_raw.strip():
+        parts = li_raw.replace(",", ";").split(";")
+        for p in parts:
+            if "=" not in p:
+                continue
+            k, v = p.split("=", 1)
+            kk = str(k).strip().lower().replace("-", "_")
+            if not kk:
+                continue
+            try:
+                layer_intensities[kk] = float(max(0.0, float(v)))
+            except Exception:
+                continue
+
+    seed = int(attack.get("seed", 0) or 0)
+    server_round = int(attack.get("server_round", 0) or 0)
+    client_id = int(attack.get("client_id", 0) or 0)
+    gen = torch.Generator(device="cpu")
+
+    poisoned_any = torch.zeros((labels.shape[0],), dtype=torch.bool, device="cpu")
+    poisoned_lf = 0
+    poisoned_bd = 0
+
+    for layer in layers:
+        layer = str(layer).strip().lower().replace("-", "_")
+
+        if layer == "label_flip":
+            num_classes = int(attack.get("num_classes", 0) or 0)
+            if num_classes <= 1:
+                continue
+            layer_intensity = float(layer_intensities.get("label_flip", intensity) or 0.0)
+            if layer_intensity <= 0.0:
+                continue
+            flip_rate = float(attack.get("label_flip_flip_rate", 0.0) or 0.0)
+            flip_rate = max(0.0, min(1.0, flip_rate * layer_intensity))
+            if flip_rate <= 0.0:
+                continue
+            targeted = bool(attack.get("label_flip_targeted", False))
+            src = int(attack.get("label_flip_source_class", 0) or 0)
+            tgt = int(attack.get("label_flip_target_class", 1) or 1)
+            src = int(max(0, min(num_classes - 1, src)))
+            tgt = int(max(0, min(num_classes - 1, tgt)))
+            gen.manual_seed(_stable_int_seed(seed, server_round, client_id, 31001 + int(step)))
+            labels_cpu = labels.detach().to("cpu")
+            mask = (torch.rand((labels_cpu.shape[0],), generator=gen) < float(flip_rate))
+            if targeted:
+                mask = mask & (labels_cpu == int(src))
+                if not bool(mask.any().item()):
+                    continue
+                new_labels = labels_cpu.clone()
+                new_labels[mask] = int(tgt)
+                labels = new_labels
+                poisoned_any |= mask
+                poisoned_lf += int(mask.sum().item())
+                continue
+            if not bool(mask.any().item()):
+                continue
+            r = torch.randint(
+                0,
+                int(num_classes - 1),
+                size=labels_cpu.shape,
+                generator=gen,
+                dtype=labels_cpu.dtype,
+            )
+            new_vals = r + (r >= labels_cpu).to(labels_cpu.dtype)
+            new_labels = labels_cpu.clone()
+            new_labels[mask] = new_vals[mask]
+            labels = new_labels
+            poisoned_any |= mask
+            poisoned_lf += int(mask.sum().item())
+            continue
+
+        if layer == "backdoor":
+            if inputs.ndim != 4:
+                continue
+            layer_intensity = float(layer_intensities.get("backdoor", intensity) or 0.0)
+            if layer_intensity <= 0.0:
+                continue
+            poison_rate = float(attack.get("backdoor_poison_rate", 0.0) or 0.0)
+            poison_rate = max(0.0, min(1.0, poison_rate * layer_intensity))
+            if poison_rate <= 0.0:
+                continue
+            target_label = int(attack.get("backdoor_target_label", 0) or 0)
+            patch_size = int(attack.get("backdoor_patch_size", 4) or 4)
+            blend_alpha = float(attack.get("backdoor_blend_alpha", 0.0) or 0.0)
+            alpha = max(0.0, min(1.0, blend_alpha * layer_intensity))
+            if alpha <= 0.0:
+                continue
+            gen.manual_seed(_stable_int_seed(seed, server_round, client_id, 31002 + int(step)))
+            b, c, h, w = inputs.shape
+            ps = int(max(1, min(patch_size, h, w)))
+            mask = (torch.rand((b,), generator=gen) < float(poison_rate))
+            if not bool(mask.any().item()):
+                continue
+            poisoned = inputs.clone()
+            labels2 = labels.clone()
+            idxs = [int(i) for i in torch.nonzero(mask, as_tuple=False).flatten().tolist()]
+            for i in idxs:
+                region = poisoned[i, :, (h - ps) : h, (w - ps) : w]
+                patch = torch.ones_like(region)
+                poisoned[i, :, (h - ps) : h, (w - ps) : w] = (1.0 - float(alpha)) * region + float(alpha) * patch
+                labels2[i] = int(target_label)
+            inputs = poisoned
+            labels = labels2
+            poisoned_any |= mask
+            poisoned_bd += int(mask.sum().item())
+            continue
+
+    poisoned_total = int(poisoned_any.sum().item()) if poisoned_any.numel() else 0
+    return inputs, labels, {"poisoned": int(poisoned_total), "label_flip": int(poisoned_lf), "backdoor": int(poisoned_bd)}
 
 
 def train(net, trainloader, epochs, lr, device, *, attack: Optional[Dict[str, Any]] = None):
@@ -4626,183 +4966,6 @@ def train(net, trainloader, epochs, lr, device, *, attack: Optional[Dict[str, An
     poison_examples_poisoned = 0
     poison_label_flip_poisoned = 0
     poison_backdoor_poisoned = 0
-
-    def _maybe_poison_batch(
-        *,
-        inputs: torch.Tensor,
-        labels: torch.Tensor,
-        attack: Optional[Dict[str, Any]],
-        step: int,
-    ) -> Tuple[torch.Tensor, torch.Tensor, Dict[str, int]]:
-        if not attack:
-            return inputs, labels, {"poisoned": 0, "label_flip": 0, "backdoor": 0}
-        if not bool(attack.get("enabled", False)):
-            return inputs, labels, {"poisoned": 0, "label_flip": 0, "backdoor": 0}
-        if not bool(attack.get("is_malicious", False)):
-            return inputs, labels, {"poisoned": 0, "label_flip": 0, "backdoor": 0}
-
-        # Multi-layer support (client-side poisoning only cares about label_flip/backdoor).
-        layers_raw = attack.get("layers")
-        layers: List[str] = []
-        if isinstance(layers_raw, list):
-            layers = [str(x).strip().lower().replace("-", "_") for x in layers_raw if str(x).strip()]
-        elif isinstance(layers_raw, str) and layers_raw.strip():
-            s = layers_raw.strip().lower()
-            if ";" in s:
-                layers = [p.strip().replace("-", "_") for p in s.split(";") if p.strip()]
-            elif "+" in s:
-                layers = [p.strip().replace("-", "_") for p in s.split("+") if p.strip()]
-
-        name = str(attack.get("name", "none") or "none").strip().lower().replace("-", "_")
-        if not layers:
-            layers = [name]
-
-        intensity = float(attack.get("intensity", 0.0) or 0.0)
-        if intensity <= 0.0 or all(str(x).strip().lower() in {"none", "off", "disabled"} for x in layers):
-            return inputs, labels, {"poisoned": 0, "label_flip": 0, "backdoor": 0}
-
-        # Optional per-layer intensities (effective intensity per layer).
-        # If absent, fall back to the global intensity.
-        li_raw = attack.get("layer_intensities")
-        if li_raw is None:
-            li_raw = attack.get("attack_layer_intensities")
-        layer_intensities: Dict[str, float] = {}
-        if isinstance(li_raw, dict):
-            for k, v in li_raw.items():
-                try:
-                    kk = str(k).strip().lower().replace("-", "_")
-                    if not kk:
-                        continue
-                    layer_intensities[kk] = float(max(0.0, float(v)))
-                except Exception:
-                    continue
-        elif isinstance(li_raw, str) and li_raw.strip():
-            parts = li_raw.replace(",", ";").split(";")
-            for p in parts:
-                if "=" not in p:
-                    continue
-                k, v = p.split("=", 1)
-                kk = str(k).strip().lower().replace("-", "_")
-                if not kk:
-                    continue
-                try:
-                    layer_intensities[kk] = float(max(0.0, float(v)))
-                except Exception:
-                    continue
-
-        seed = int(attack.get("seed", 0) or 0)
-        server_round = int(attack.get("server_round", 0) or 0)
-        client_id = int(attack.get("client_id", 0) or 0)
-        gen = torch.Generator(device="cpu")
-
-        poisoned_any = torch.zeros((labels.shape[0],), dtype=torch.bool, device="cpu")
-        poisoned_lf = 0
-        poisoned_bd = 0
-
-        # Apply layers in order
-        for layer in layers:
-            layer = str(layer).strip().lower().replace("-", "_")
-
-            # Label flipping (classification)
-            if layer == "label_flip":
-                num_classes = int(attack.get("num_classes", 0) or 0)
-                if num_classes <= 1:
-                    continue
-
-                layer_intensity = float(layer_intensities.get("label_flip", intensity) or 0.0)
-                if layer_intensity <= 0.0:
-                    continue
-
-                flip_rate = float(attack.get("label_flip_flip_rate", 0.0) or 0.0)
-                flip_rate = max(0.0, min(1.0, flip_rate * layer_intensity))
-                if flip_rate <= 0.0:
-                    continue
-
-                targeted = bool(attack.get("label_flip_targeted", False))
-                src = int(attack.get("label_flip_source_class", 0) or 0)
-                tgt = int(attack.get("label_flip_target_class", 1) or 1)
-                src = int(max(0, min(num_classes - 1, src)))
-                tgt = int(max(0, min(num_classes - 1, tgt)))
-
-                gen.manual_seed(_stable_int_seed(seed, server_round, client_id, 31001 + int(step)))
-                labels_cpu = labels.detach().to("cpu")
-                mask = (torch.rand((labels_cpu.shape[0],), generator=gen) < float(flip_rate))
-                if targeted:
-                    mask = mask & (labels_cpu == int(src))
-                    if not bool(mask.any().item()):
-                        continue
-                    new_labels = labels_cpu.clone()
-                    new_labels[mask] = int(tgt)
-                    labels = new_labels.to(device)
-                    poisoned_any |= mask
-                    poisoned_lf += int(mask.sum().item())
-                    continue
-
-                # Untargeted: flip to any other class
-                if not bool(mask.any().item()):
-                    continue
-                r = torch.randint(
-                    0,
-                    int(num_classes - 1),
-                    size=labels_cpu.shape,
-                    generator=gen,
-                    dtype=labels_cpu.dtype,
-                )
-                new_vals = r + (r >= labels_cpu).to(labels_cpu.dtype)
-                new_labels = labels_cpu.clone()
-                new_labels[mask] = new_vals[mask]
-                labels = new_labels.to(device)
-                poisoned_any |= mask
-                poisoned_lf += int(mask.sum().item())
-                continue
-
-            # Backdoor (vision only)
-            if layer == "backdoor":
-                if inputs.ndim != 4:
-                    continue
-
-                layer_intensity = float(layer_intensities.get("backdoor", intensity) or 0.0)
-                if layer_intensity <= 0.0:
-                    continue
-
-                poison_rate = float(attack.get("backdoor_poison_rate", 0.0) or 0.0)
-                poison_rate = max(0.0, min(1.0, poison_rate * layer_intensity))
-                if poison_rate <= 0.0:
-                    continue
-                target_label = int(attack.get("backdoor_target_label", 0) or 0)
-                patch_size = int(attack.get("backdoor_patch_size", 4) or 4)
-                blend_alpha = float(attack.get("backdoor_blend_alpha", 0.0) or 0.0)
-                alpha = max(0.0, min(1.0, blend_alpha * layer_intensity))
-                if alpha <= 0.0:
-                    continue
-
-                gen.manual_seed(_stable_int_seed(seed, server_round, client_id, 31002 + int(step)))
-                b, c, h, w = inputs.shape
-                ps = int(max(1, min(patch_size, h, w)))
-
-                mask = (torch.rand((b,), generator=gen) < float(poison_rate))
-                if not bool(mask.any().item()):
-                    continue
-
-                poisoned = inputs.clone()
-                labels2 = labels.clone()
-
-                idxs = [int(i) for i in torch.nonzero(mask, as_tuple=False).flatten().tolist()]
-                for i in idxs:
-                    # Simple bottom-right patch trigger in tensor space.
-                    region = poisoned[i, :, (h - ps) : h, (w - ps) : w]
-                    patch = torch.ones_like(region)
-                    poisoned[i, :, (h - ps) : h, (w - ps) : w] = (1.0 - float(alpha)) * region + float(alpha) * patch
-                    labels2[i] = int(target_label)
-
-                inputs = poisoned
-                labels = labels2
-                poisoned_any |= mask
-                poisoned_bd += int(mask.sum().item())
-                continue
-
-        poisoned_total = int(poisoned_any.sum().item()) if poisoned_any.numel() else 0
-        return inputs, labels, {"poisoned": int(poisoned_total), "label_flip": int(poisoned_lf), "backdoor": int(poisoned_bd)}
 
     step = 0
     for _ in range(epochs):
