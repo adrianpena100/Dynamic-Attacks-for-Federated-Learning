@@ -10,8 +10,8 @@ torch==2.8.0
 torchvision==0.23.0
 
 # Data / ML utilities
-numpy==2.2.6
-pandas==2.3.5
+numpy==1.26.4
+pandas==2.2.3
 scikit-learn==1.7.2
 scipy==1.15.3
 datasets==3.1.0
