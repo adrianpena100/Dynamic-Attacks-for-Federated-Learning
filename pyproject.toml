@@ -97,7 +97,7 @@ artifact-dir = ""
 # Override per run via --run-config 'model="resnet18"'.
 # Non-vision modalities (text, tabular) use their own models; an explicit vision
 # model on a non-vision dataset now fails fast with a clear error.
-model = "auto"
+model = "resnet18"
 
 
 # --------------------------------------------------------
