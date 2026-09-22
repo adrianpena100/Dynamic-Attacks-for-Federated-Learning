@@ -4448,7 +4448,13 @@ def load_centralized_dataset(
         ds_kwargs["name"] = dataset_subset
     try:
         eval_dataset = load_dataset(spec.dataset, split=split, **ds_kwargs)
-    except Exception:
+    except ValueError:
+        # Some HF datasets use "validation" instead of "test" — only fall back
+        # when the split we tried was literally "test" and the dataset rejected it.
+        # Do NOT swallow non-ValueError errors (cache/network failures); let them
+        # propagate so the real cause is visible.
+        if split != "test":
+            raise
         eval_dataset = load_dataset(spec.dataset, split="validation", **ds_kwargs)
 
     # Stratified subsampling BEFORE transforms (needs raw label column).
