@@ -899,6 +899,7 @@ class FoolsGoldStrategy(FedAvg):
             selected_count=sum(1 for cid in ids if float(weights.get(cid, 0.0)) > 0.0),
             total_count=len(ids),
         )
+        torch.cuda.empty_cache()
         return arrays, metrics
 
 
@@ -1011,6 +1012,7 @@ class FLRAMStrategy(FedAvg):
             selected_count=sum(1 for v in weights.values() if float(v) > 0.0),
             total_count=len(records),
         )
+        torch.cuda.empty_cache()
         return arrays, metrics
 
 
@@ -1450,6 +1452,7 @@ def global_evaluate(
     model = model_factory()
     model.load_state_dict(arrays.to_torch_state_dict())
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    torch.cuda.empty_cache()
     model.to(device)
 
     dataset_modality: str = str(run_config.get("dataset-modality", "auto"))

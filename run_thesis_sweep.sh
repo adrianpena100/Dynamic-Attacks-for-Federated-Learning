@@ -22,12 +22,13 @@ SEEDS=""
 FROM_LABEL=""
 STAMP_OVERRIDE=""
 EXTRA_CONFIG=""
-ROUND_TIMEOUT=120
+ROUND_TIMEOUT=600
 INIT_TIMEOUT=600
 MAX_RETRIES=2
 AUTO_LLM_SWEEP_ANALYSIS=0
 LLM_ANALYSIS_MODEL=""
 TRUST_LEVEL="full"
+LOG_BASE=""
 
 csv_escape() {
   local v="$1"
@@ -163,6 +164,10 @@ while [[ $# -gt 0 ]]; do
       LLM_ANALYSIS_MODEL="$2"
       shift 2
       ;;
+    --log-base)
+      LOG_BASE="$2"
+      shift 2
+      ;;
     -h|--help)
       usage
       exit 0
@@ -194,6 +199,11 @@ if [[ -n "$STAMP_OVERRIDE" ]]; then
   STAMP="$STAMP_OVERRIDE"
 else
   STAMP="$(date +%Y-%m-%d_%H-%M-%S)"
+fi
+
+# Default log base to logs/sweeps (unchanged behaviour when --log-base is not set)
+if [[ -z "$LOG_BASE" ]]; then
+  LOG_BASE="$ROOT_DIR/logs/sweeps"
 fi
 
 if [[ ! -f "$SWEEPS_FILE" ]]; then
@@ -296,7 +306,7 @@ pick_seed() {
 }
 
 for strategy_name in "${RUN_STRATEGIES[@]}"; do
-  SWEEP_ROOT="$ROOT_DIR/logs/sweeps/${strategy_name}_${NAME}__${STAMP}"
+  SWEEP_ROOT="$LOG_BASE/${strategy_name}_${NAME}__${STAMP}"
   STRATEGY_SWEEP_ROOTS+=("$SWEEP_ROOT")
   mkdir -p "$SWEEP_ROOT"
 
@@ -426,6 +436,9 @@ for strategy_name in "${RUN_STRATEGIES[@]}"; do
           else
             echo "WARNING: No round progress for ${ROUND_TIMEOUT}s (stuck at round ${last_round:-0}), killing baseline run..." >&2
           fi
+          # Surface the real cause (OOM etc.) in stderr before killing, so .err self-documents.
+          oom_hit="$(grep -oE 'CUDA out of memory|OutOfMemoryError|RayTaskError|ClientAppException' "$tmp_log" 2>/dev/null | sort | uniq -c | tr '\n' ';' || true)"
+          [[ -n "$oom_hit" ]] && echo "CAUSE (from run log): ${oom_hit}" >&2
           kill "$run_pid" 2>/dev/null || true
           timed_out=1
           break
@@ -465,7 +478,7 @@ for strategy_name in "${RUN_STRATEGIES[@]}"; do
         echo "Aborting sweep early due to failed baseline: $baseline_label ($strategy_name)" >&2
         exit 1
       fi
-      echo "$(csv_escape "$baseline_label"),$(csv_escape "BASELINE_clean"),$(csv_escape "$rep"),$(csv_escape "$seed_value"),$(csv_escape "$(basename "$new_dir")"),$(csv_escape "0"),$(csv_escape "30"),$(csv_escape "1.0"),$(csv_escape "off"),$(csv_escape "none"),$(csv_escape "0.0"),$(csv_escape "single"),$(csv_escape "0"),$(csv_escape ""),$(csv_escape "")" >> "$settings_csv"
+      echo "$(csv_escape "$baseline_label"),$(csv_escape "BASELINE_clean"),$(csv_escape "$rep"),$(csv_escape "$seed_value"),$(csv_escape "$(basename "$new_dir")"),$(csv_escape "0"),$(csv_escape "50"),$(csv_escape "1.0"),$(csv_escape "off"),$(csv_escape "none"),$(csv_escape "0.0"),$(csv_escape "single"),$(csv_escape "0"),$(csv_escape ""),$(csv_escape "")" >> "$settings_csv"
       COMPLETED_KEYS_STR+="$completed_key"$'\n'
     else
       echo "Warning: could not resolve run folder for ${baseline_label}." >&2
@@ -658,6 +671,9 @@ for strategy_name in "${RUN_STRATEGIES[@]}"; do
             else
               echo "WARNING: No round progress for ${ROUND_TIMEOUT}s (stuck at round ${last_round:-0}), killing run..." >&2
             fi
+            # Surface the real cause (OOM etc.) in stderr before killing, so .err self-documents.
+            oom_hit="$(grep -oE 'CUDA out of memory|OutOfMemoryError|RayTaskError|ClientAppException' "$tmp_log" 2>/dev/null | sort | uniq -c | tr '\n' ';' || true)"
+            [[ -n "$oom_hit" ]] && echo "CAUSE (from run log): ${oom_hit}" >&2
             kill "$run_pid" 2>/dev/null || true
             timed_out=1
             break
@@ -694,9 +710,19 @@ for strategy_name in "${RUN_STRATEGIES[@]}"; do
         echo "Moved run to $new_dir"
         metrics_probe="$new_dir/metrics/evaluate_server__accuracy.csv"
         if [[ ! -s "$metrics_probe" ]]; then
-          echo "Error: run produced no metrics at $metrics_probe" >&2
-          echo "Aborting sweep early due to failed run: $label_eff ($strategy_name)" >&2
-          exit 1
+          echo "Warning: run produced no metrics at $metrics_probe — skipping and continuing sweep." >&2
+          echo "FAILED_RUN: $label_eff ($strategy_name) — no metrics, will need re-run." >&2
+          continue
+        fi
+        # Verify enough rounds completed (≥90% of end_round) before marking as done.
+        # Incomplete runs with partial metrics would otherwise get locked in sweep_settings.csv
+        # and be silently skipped on resume, leaving permanent gaps.
+        actual_rounds="$(tail -n +2 "$metrics_probe" | wc -l | tr -d ' ')"
+        min_rounds="$(( end_round * 90 / 100 ))"
+        if [[ "$actual_rounds" -lt "$min_rounds" ]]; then
+          echo "Warning: run only completed $actual_rounds/$end_round rounds (need $min_rounds) — treating as failed." >&2
+          echo "FAILED_RUN: $label_eff ($strategy_name) — incomplete ($actual_rounds rounds), will need re-run." >&2
+          continue
         fi
         echo "$(csv_escape "$label_eff"),$(csv_escape "$label"),$(csv_escape "$rep"),$(csv_escape "$seed_value"),$(csv_escape "$(basename "$new_dir")"),$(csv_escape "$start_round"),$(csv_escape "$end_round"),$(csv_escape "$ramp_end"),$(csv_escape "$attack_mode"),$(csv_escape "$selection_mode"),$(csv_escape "$churn_fraction"),$(csv_escape "$layering_mode"),$(csv_escape "$layered_k"),$(csv_escape "$layered_attacks"),$(csv_escape "$layer_mult")" >> "$settings_csv"
         COMPLETED_KEYS_STR+="$completed_key"$'\n'

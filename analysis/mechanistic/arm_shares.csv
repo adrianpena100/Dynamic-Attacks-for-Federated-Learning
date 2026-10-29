@@ -1,0 +1,16 @@
+defense,schedule,dominant_arm,dominant_share,total_rounds,n_seeds,share_gaussian_noise,share_sign_flip,share_label_flip,share_backdoor,share_alie,share_mean_shift
+multikrum,sticky,sign_flip,0.36,100,2,0.15,0.36,0.15,0.03,0.11,0.2
+multikrum,churn,alie,0.353,150,3,0.087,0.22,0.047,0.14,0.353,0.153
+multikrum,random,sign_flip,0.273,150,3,0.107,0.273,0.04,0.147,0.24,0.193
+fedtrimmedavg,sticky,sign_flip,0.36,150,3,0.073,0.36,0.067,0.153,0.127,0.22
+fedtrimmedavg,churn,sign_flip,0.345,142,3,0.169,0.345,0.12,0.141,0.134,0.092
+fedtrimmedavg,random,gaussian_noise,0.313,150,3,0.313,0.227,0.047,0.06,0.16,0.193
+fedmedian,sticky,sign_flip,0.293,150,3,0.153,0.293,0.167,0.107,0.213,0.067
+fedmedian,churn,sign_flip,0.293,150,3,0.047,0.293,0.06,0.06,0.273,0.267
+fedmedian,random,gaussian_noise,0.247,150,3,0.247,0.147,0.127,0.053,0.213,0.213
+foolsgold,sticky,sign_flip,0.53,100,2,0.09,0.53,0.06,0.03,0.23,0.06
+foolsgold,churn,sign_flip,0.34,100,2,0.08,0.34,0.06,0.05,0.21,0.26
+foolsgold,random,mean_shift,0.28,100,2,0.07,0.27,0.05,0.26,0.07,0.28
+mab-rfl,sticky,label_flip,0.26,100,2,0.18,0.21,0.26,0.05,0.05,0.25
+mab-rfl,churn,mean_shift,0.44,100,2,0.05,0.37,0.05,0.06,0.03,0.44
+mab-rfl,random,mean_shift,0.34,100,2,0.07,0.18,0.27,0.04,0.1,0.34

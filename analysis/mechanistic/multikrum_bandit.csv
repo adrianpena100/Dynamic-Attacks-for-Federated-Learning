@@ -1,0 +1,7 @@
+arm,estimated_value,times_selected
+sign_flip,-0.05973375562,25
+mean_shift,-0.1917836779,7
+label_flip,-0.1940048543,4
+gaussian_noise,-0.2096313555,5
+alie,-0.2566629623,2
+backdoor,-0.3570992897,1

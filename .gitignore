@@ -12,3 +12,9 @@ db/*.sqlite
 db/*.sqlite-shm
 db/*.sqlite-wal
 docs/updates/
+docs/rerun_confs
+docs/thesis_examiner_feedback.md
+slurm
+dashboard/draft_original_backup.tex
+dashboard/draft_pre_reframe_2026-10-18.tex
+dashboard/draft.tex

@@ -813,6 +813,11 @@ default = "local-simulation"
 
 [tool.flwr.federations.local-simulation]
 options.num-supernodes = 100
+# GPU memory cap also applied to the DEFAULT federation: runs launched without an
+# explicit --federation were piling all sampled clients onto one GPU (num_gpus=0 by
+# default) and OOM-ing on CIFAR-100/ResNet-18. 0.5 => max 2 ClientApps per GPU.
+options.backend.client-resources.num-cpus = 2
+options.backend.client-resources.num-gpus = 0.5
 
 [tool.flwr.federations.local-simulation-smoke]
 options.num-supernodes = 2
@@ -820,7 +825,7 @@ options.num-supernodes = 2
 [tool.flwr.federations.local-simulation-gpu]
 options.num-supernodes = 100
 options.backend.client-resources.num-cpus = 2 # I assume each ClientApp uses ~2 CPUs
-options.backend.client-resources.num-gpus = 0.2 # I allow at most ~5 ClientApps per GPU
+options.backend.client-resources.num-gpus = 0.5 # 2 ClientApps per GPU max (bumped from 0.25 to prevent OOM when 2 jobs share a node on L40)
 
 [tool.flwr.federations.supergrid-deployment]
 address = "supergrid.flower.ai"

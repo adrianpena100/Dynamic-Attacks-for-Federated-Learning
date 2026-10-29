@@ -167,6 +167,7 @@ class TestModelFactory:
             ("uoft-cs/cifar10", "simple-cnn", 10, (1, 3, 32, 32)),
             ("uoft-cs/cifar10", "resnet18", 10, (1, 3, 32, 32)),
             ("uoft-cs/cifar100", "simple-cnn", 100, (1, 3, 32, 32)),
+            ("uoft-cs/cifar100", "resnet18", 100, (1, 3, 32, 32)),
             ("ylecun/mnist", "simple-cnn", 10, (1, 1, 28, 28)),
             ("ylecun/mnist", "resnet18", 10, (1, 1, 28, 28)),
             ("flwrlabs/femnist", "simple-cnn", 62, (1, 1, 28, 28)),

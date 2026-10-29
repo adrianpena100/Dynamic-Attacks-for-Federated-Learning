@@ -31,6 +31,7 @@ echo "=== Running CIFAR-100 sweep for $STRATEGY seed=$SEED ==="
   --name fixed_vs_mab_cifar100 \
   --dataset "uoft-cs/cifar100" \
   --dirichlet-alpha 1.0 \
+  --federation local-simulation-gpu \
   --sweeps-file docs/fixed_vs_mab_sweep.conf \
   --strategies "$STRATEGY" \
   --repeats 1 \

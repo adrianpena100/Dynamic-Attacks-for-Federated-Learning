@@ -3004,7 +3004,7 @@ def main() -> int:
     partitioner_name = resolved_for_naming.get("partitioner")
     dirichlet_alpha = resolved_for_naming.get("dirichlet-alpha")
 
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:23]  # ms precision avoids parallel-job collisions
     # Folder names are intentionally minimal. For a fixed strategy/dataset/iid
     # combination, lexicographic sort matches execution time.
     strategy_slug = _slugify(strategy_name)
